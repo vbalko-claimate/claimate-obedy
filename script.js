@@ -1,8 +1,8 @@
 const restaurantsData = [
     {
         name: "Restaurant Zátiší",
-        proxyUrl: 'https://cors-anywhere.herokuapp.com/',
-        targetUrl: 'https://restaurantcafe.cz/restaurant-cafe-zatisi/denni-menu-zatisi/'
+        proxyUrl: 'https://corsproxy.io/?',//'https://cors-anywhere.herokuapp.com/',
+        targetUrl: encodeURIComponent('https://restaurantcafe.cz/restaurant-cafe-zatisi/denni-menu-zatisi/')
     }
     // Add more restaurant objects as needed
 ];
