@@ -2,9 +2,15 @@ const restaurantsData = [
     {
         name: "Restaurant Zátiší",
         proxyUrl: 'https://corsproxy.io/?',//'https://cors-anywhere.herokuapp.com/',
-        targetUrl: encodeURIComponent('https://restaurantcafe.cz/restaurant-cafe-zatisi/denni-menu-zatisi/')
-    }
-    // Add more restaurant objects as needed
+        targetUrl: encodeURIComponent('https://restaurantcafe.cz/restaurant-cafe-zatisi/denni-menu-zatisi/'),
+        extractFunction: "extractTodaysMenuZatisi"
+    },
+    {
+        name: "Spojovna",
+        proxyUrl: 'https://corsproxy.io/?',//'https://cors-anywhere.herokuapp.com/',
+        targetUrl: encodeURIComponent('https://pivovarspojovna.cz/menu/?datum=dnes'),
+        extractFunction: "extractTodaySpojovna"
+    }    
 ];
 
 function openMenu(evt, restaurantName) {
@@ -42,12 +48,25 @@ function displayMenu(restaurant, menuItemsHtml) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
+    let fetchCounter = 0; // Initialize counter
+
     restaurantsData.forEach(restaurant => {
-        fetchMenu(restaurant);
+        fetchMenu(restaurant, () => {
+            // Increment counter within the callback
+            fetchCounter++;
+            // Check if all menus have been fetched
+            if (fetchCounter === restaurantsData.length) {
+                // Open the first tab only after all menus have been attempted to be fetched
+                const firstTab = document.querySelector('.tablinks');
+                if (firstTab) {
+                    firstTab.click();
+                }
+            }
+        });
     });
 });
 
-function fetchMenu(restaurant) {
+function fetchMenu(restaurant, callback) {
     const apiUrl = `${restaurant.proxyUrl}${restaurant.targetUrl}`;
 
     fetch(apiUrl)
@@ -61,61 +80,73 @@ function fetchMenu(restaurant) {
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, "text/html");
 
-        // Extract today's menu based on the day of the week
-        const todaysMenu = extractTodaysMenuZatisi(doc);
-
-        // Display the menu in its tab
+        // Extract and display today's menu
+        const todaysMenu = extractors[restaurant.extractFunction](doc);
         displayMenu(restaurant, todaysMenu);
     })
     .catch(error => {
         console.error('There has been a problem with your fetch operation:', error);
+    })
+    .finally(() => {
+        // Call the callback function regardless of the result
+        callback();
     });
+}
 
-    // Make sure to open the first tab after all menus are attempted to be fetched
-    if (restaurantsData.indexOf(restaurant) === 0) {
-        setTimeout(() => {
-            const firstTab = document.querySelector('.tablinks');
-            if (firstTab) {
-                firstTab.click();
+const extractors = {
+    extractTodaysMenuZatisi: function(doc) {
+        // Your existing logic to extract today's menu from the parsed HTML document
+        const days = ['Neděle', 'Pondělí', 'Úterý', 'Středa', 'Čtvrtek', 'Pátek', 'Sobota'];
+        const today = new Date();
+        const dayName = days[today.getDay()];
+        let todaysMenu = "";
+    
+        const menuDateHeaders = doc.querySelectorAll('.wpb_text_column .wpb_wrapper h4');
+        //regular menu
+        menuDateHeaders.forEach(header => {
+            //regular menu
+            if (header.textContent.includes(dayName)) {
+                let sibling = header.nextElementSibling;
+                while (sibling) {
+                    if (sibling.tagName.toLowerCase() === 'p') {
+                        todaysMenu += sibling.outerHTML;
+                    } else if (sibling.tagName.toLowerCase() === 'h4') {
+                        break;
+                    }
+                    sibling = sibling.nextElementSibling;
+                }
             }
-        }, 100);
+            if (header.outerHTML.includes('<!--more-->') && header.nextElementSibling.tagName.toLowerCase() === 'p') {
+                let sibling = header.nextElementSibling;
+                while(sibling) {
+                    if (sibling.tagName.toLowerCase() === 'p') {
+                        todaysMenu += sibling.outerHTML;
+                    } else {
+                        break;
+                    }
+                    sibling = sibling.nextElementSibling;                
+                }
+            }
+        });
+    
+        return todaysMenu !== "" ? `<h4>${dayName}</h4>${todaysMenu}` : '<p>Today\'s menu is not available.</p>';
+    },
+    extractTodaySpojovna: function(doc) {
+        let todaysMenu = "";
+
+        const menuDateHeaders = doc.querySelectorAll('#content > div > div > div > div > div.visible');
+
+        menuDateHeaders.forEach(header => {
+            todaysMenu += header.firstChild.nextElementSibling.outerHTML;
+            const rows = header.querySelectorAll('tr');
+            rows.forEach(row => {
+                todaysMenu += `<p> ${row.innerText}</p>`;
+            })
+            todaysMenu += "";
+        });
+
+        return todaysMenu !== "" ? todaysMenu : '<p>Today\'s menu is not available.</p>';
     }
 }
 
-function extractTodaysMenuZatisi(doc) {
-    // Your existing logic to extract today's menu from the parsed HTML document
-    const days = ['Neděle', 'Pondělí', 'Úterý', 'Středa', 'Čtvrtek', 'Pátek', 'Sobota'];
-    const today = new Date();
-    const dayName = days[today.getDay()];
-    let todaysMenu = "";
 
-    const menuDateHeaders = doc.querySelectorAll('.wpb_text_column .wpb_wrapper h4');
-    //regular menu
-    menuDateHeaders.forEach(header => {
-        //regular menu
-        if (header.textContent.includes(dayName)) {
-            let sibling = header.nextElementSibling;
-            while (sibling) {
-                if (sibling.tagName.toLowerCase() === 'p') {
-                    todaysMenu += sibling.outerHTML;
-                } else if (sibling.tagName.toLowerCase() === 'h4') {
-                    break;
-                }
-                sibling = sibling.nextElementSibling;
-            }
-        }
-        if (header.outerHTML.includes('<!--more-->') && header.nextElementSibling.tagName.toLowerCase() === 'p') {
-            let sibling = header.nextElementSibling;
-            while(sibling) {
-                if (sibling.tagName.toLowerCase() === 'p') {
-                    todaysMenu += sibling.outerHTML;
-                } else {
-                    break;
-                }
-                sibling = sibling.nextElementSibling;                
-            }
-        }
-    });
-
-    return todaysMenu !== "" ? `<h4>${dayName}</h4>${todaysMenu}` : '<p>Today\'s menu is not available.</p>';
-}
