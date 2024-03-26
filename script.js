@@ -62,7 +62,7 @@ function fetchMenu(restaurant) {
         const doc = parser.parseFromString(html, "text/html");
 
         // Extract today's menu based on the day of the week
-        const todaysMenu = extractTodaysMenu(doc);
+        const todaysMenu = extractTodaysMenuZatisi(doc);
 
         // Display the menu in its tab
         displayMenu(restaurant, todaysMenu);
@@ -82,7 +82,7 @@ function fetchMenu(restaurant) {
     }
 }
 
-function extractTodaysMenu(doc) {
+function extractTodaysMenuZatisi(doc) {
     // Your existing logic to extract today's menu from the parsed HTML document
     const days = ['Neděle', 'Pondělí', 'Úterý', 'Středa', 'Čtvrtek', 'Pátek', 'Sobota'];
     const today = new Date();
@@ -90,7 +90,9 @@ function extractTodaysMenu(doc) {
     let todaysMenu = "";
 
     const menuDateHeaders = doc.querySelectorAll('.wpb_text_column .wpb_wrapper h4');
+    //regular menu
     menuDateHeaders.forEach(header => {
+        //regular menu
         if (header.textContent.includes(dayName)) {
             let sibling = header.nextElementSibling;
             while (sibling) {
@@ -100,6 +102,17 @@ function extractTodaysMenu(doc) {
                     break;
                 }
                 sibling = sibling.nextElementSibling;
+            }
+        }
+        if (header.outerHTML.includes('<!--more-->') && header.nextElementSibling.tagName.toLowerCase() === 'p') {
+            let sibling = header.nextElementSibling;
+            while(sibling) {
+                if (sibling.tagName.toLowerCase() === 'p') {
+                    todaysMenu += sibling.outerHTML;
+                } else {
+                    break;
+                }
+                sibling = sibling.nextElementSibling;                
             }
         }
     });
