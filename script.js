@@ -8,7 +8,7 @@ const restaurantsData = [
     {
         name: "Spojovna",
         proxyUrl: 'https://corsproxy.io/?',//'https://cors-anywhere.herokuapp.com/',
-        targetUrl: encodeURIComponent('https://pivovarspojovna.cz/menu/?datum=dnes'),
+        targetUrl: encodeURIComponent('https://pivovarspojovna.cz/menu/'),
         extractFunction: "extractTodaySpojovna"
     }    
 ];
