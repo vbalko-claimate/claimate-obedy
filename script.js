@@ -159,7 +159,7 @@ const extractors = {
         const menuDateHeaders = doc.querySelectorAll('#daily-menu');
 
         menuDateHeaders.forEach(header => {
-            todaysMenu += header.firstChild.nextElementSibling.outerHTML;
+            //todaysMenu += header.firstChild.nextElementSibling.outerHTML;
             const rows = header.querySelectorAll('p');
             rows.forEach(row => {
                 todaysMenu += `<p> ${row.innerText}</p>`;
