@@ -10,7 +10,13 @@ const restaurantsData = [
         proxyUrl: 'https://corsproxy.io/?',//'https://cors-anywhere.herokuapp.com/',
         targetUrl: encodeURIComponent('https://pivovarspojovna.cz/menu/'),
         extractFunction: "extractTodaySpojovna"
-    }    
+    }, 
+    {
+        name: "Rangoli",
+        proxyUrl: 'https://corsproxy.io/?',//'https://cors-anywhere.herokuapp.com/',
+        targetUrl: encodeURIComponent('https://www.rangolikunratice.cz/cs/'),
+        extractFunction: "extractTodayRangoli"
+    },       
 ];
 
 function openMenu(evt, restaurantName) {
@@ -139,6 +145,22 @@ const extractors = {
         menuDateHeaders.forEach(header => {
             todaysMenu += header.firstChild.nextElementSibling.outerHTML;
             const rows = header.querySelectorAll('tr');
+            rows.forEach(row => {
+                todaysMenu += `<p> ${row.innerText}</p>`;
+            })
+            todaysMenu += "";
+        });
+
+        return todaysMenu !== "" ? todaysMenu : '<p>Today\'s menu is not available.</p>';
+    },
+    extractTodayRangoli: function(doc) {
+        let todaysMenu = "";
+
+        const menuDateHeaders = doc.querySelectorAll('#daily-menu');
+
+        menuDateHeaders.forEach(header => {
+            todaysMenu += header.firstChild.nextElementSibling.outerHTML;
+            const rows = header.querySelectorAll('p');
             rows.forEach(row => {
                 todaysMenu += `<p> ${row.innerText}</p>`;
             })
