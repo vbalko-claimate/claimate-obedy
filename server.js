@@ -131,8 +131,8 @@ async function parseSpojovnaMenu(url) {
     console.log(`Launching Puppeteer for: ${url}`);
     browser = await puppeteer.launch({
       headless: true, // Run in the background
-      args: ["--no-sandbox", "--disable-setuid-sandbox"], // Common args for compatibility
-      executablePath: process.env.CHROME_EXECUTABLE_PATH || undefined, // Use env var or let Puppeteer find default
+      args: ["--no-sandbox", "--disable-setuid-sandbox"] // Common args for compatibility
+    //   executablePath: process.env.CHROME_EXECUTABLE_PATH || undefined, // Use env var or let Puppeteer find default
     });
     const page = await browser.newPage();
 

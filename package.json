@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+    "build": "./render-build.sh",
+    "start": "node server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -16,6 +18,7 @@
     "express": "^5.1.0",
     "node-fetch": "^2.7.0",
     "pdf-parse": "^1.1.1",
+    "chromium": "^3.0.3",
     "puppeteer": "^24.8.2"
   }
 }
