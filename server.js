@@ -5,6 +5,7 @@ const pdf = require("pdf-parse"); // For parsing PDF
 const fetch = require("node-fetch"); // For fetching PDF buffer
 const cors = require("cors"); // To allow frontend requests
 const puppeteer = require("puppeteer"); // Add Puppeteer
+const path = require("path"); // To serve static files like index.html
 
 const app = express();
 const PORT = process.env.PORT || 3000; // Use environment port or 3000
@@ -546,6 +547,12 @@ app.get("/api/menu/:restaurant", async (req, res) => {
     });
   }
 });
+
+// --- Route to serve the frontend index.html ---
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "index.html"));
+});
+// --- End Frontend Route ---
 
 // Start the server
 app.listen(PORT, () => {
