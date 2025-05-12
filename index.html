@@ -1,30 +1,672 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Restaurant Menus</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <div class="tabs"></div>
-    <div class="tab-contents"></div>
-    
-    <script type="module" src="js/main.js"></script>
-</body>
-</html>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Restaurant Menus</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-    <div class="tabs"></div>
-    <div class="tab-contents"></div>
-    
-    <script src="script.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prague Lunch Menus: Volha, Zátisí & Spojovna</title>
+    <meta
+      name="description"
+      content="View the daily lunch menus for Prague restaurants Menza Volha, Café Zátisí, and Pivovar Spojovna. Updated frequently."
+    />
+    <!-- Basic JSON-LD Schema -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Daily Menus | Volha, Zátisí, Spojovna (Prague)",
+        "description": "View the daily lunch menus for Prague restaurants Menza Volha, Café Zátisí, and Pivovar Spojovna.",
+        "publisher": {
+          "@type": "Organization",
+          "name": "CLAIMATE Tech",
+          "url": "https://claimate.tech"
+        }
+      }
+    </script>
+    <!-- End Schema -->
+    <style>
+      :root {
+        --body-bg: #f8f9fa;
+        --text-color: #495057;
+        --container-bg: #ffffff;
+        --container-shadow: rgba(0, 0, 0, 0.06);
+        --header-bg-start: #007991;
+        --header-bg-end: #78ffd6;
+        --header-text: #ffffff;
+        --tab-bar-bg: #e9ecef;
+        --tab-inactive-text: #6c757d;
+        --tab-active-text: #007991; /* Primary color */
+        --tab-active-border: #007991; /* Primary color */
+        --tab-hover-bg: #f8f9fa;
+        --tab-hover-text: #005f73;
+        --tab-hover-border: #78ffd6;
+        --content-border: #dee2e6;
+        --menu-item-border: #e9ecef;
+        --menu-item-hover-bg: #e9f5f9;
+        --menu-item-name-text: #343a40;
+        --menu-item-price-text: var(--text-color); /* Use base text color */
+        --menu-item-desc-text: var(
+          --tab-inactive-text
+        ); /* Use inactive tab color */
+        --heading-color: var(--tab-active-text); /* Primary for h2 in content */
+        --link-color: var(--tab-active-text);
+        --link-border: var(--tab-active-text);
+        --link-hover-bg: var(--tab-active-text);
+        --link-hover-text: #ffffff;
+        --error-text: #d8000c;
+        --error-bg: #ffd2d2;
+        --loading-text: #888;
+        --switch-bg: #ccc;
+        --switch-bg-active: var(--header-bg-start);
+        --switch-slider: #fff;
+        --switch-label-text: var(--text-color);
+      }
+
+      body.dark-theme {
+        --body-bg: #1f2128; /* Dark blue/grey */
+        --text-color: #c5c8d2; /* Slightly lighter text */
+        --container-bg: #2c2f3a; /* Slightly lighter/bluer container */
+        --container-shadow: rgba(0, 0, 0, 0.15); /* Darker shadow for depth */
+        --header-bg-start: #005f73;
+        --header-bg-end: #1d9a8a;
+        --header-text: #ffffff;
+        --tab-bar-bg: #242730; /* Slightly different dark */
+        --tab-inactive-text: #969eb2; /* Muted text */
+        --tab-active-text: #78ffd6;
+        --tab-active-border: #78ffd6;
+        --tab-hover-bg: #353945; /* Slightly lighter hover */
+        --tab-hover-text: #ffffff;
+        --tab-hover-border: #1d9a8a;
+        --content-border: #3a3f51; /* Softer border */
+        --menu-item-border: #3a3f51; /* Softer border */
+        --menu-item-hover-bg: #353945; /* Match tab hover */
+        --menu-item-name-text: #e1e3e9; /* Brighter item name */
+        --menu-item-price-text: var(--text-color);
+        --menu-item-desc-text: var(--tab-inactive-text);
+        --heading-color: var(--tab-active-text);
+        --link-color: var(--tab-active-text);
+        --link-border: var(--tab-active-text);
+        --link-hover-bg: var(--tab-active-text);
+        --link-hover-text: #1f2128; /* Use body bg for contrast */
+        --error-text: #ff9e96;
+        --error-bg: #5c2b29;
+        --loading-text: #969eb2; /* Match inactive text */
+        --switch-bg: #52586f; /* Adjusted switch bg */
+        --switch-bg-active: var(--header-bg-end);
+        --switch-slider: #f1f1f1;
+        --switch-label-text: var(--text-color);
+      }
+
+      /* Basic Reset */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Roboto", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        padding: 0; /* Remove padding, container handles it */
+        margin: 0;
+        background-color: var(--body-bg);
+        color: var(--text-color);
+        transition: background-color 0.3s, color 0.3s; /* Add transition to body */
+      }
+      .container {
+        max-width: 800px;
+        margin: 40px auto; /* Slightly more margin */
+        background-color: var(--container-bg);
+        border-radius: 8px; /* Slightly less rounded */
+        box-shadow: 0 6px 20px var(--container-shadow); /* Softer, deeper shadow */
+        overflow: hidden;
+        transition: background-color 0.3s; /* Add transition */
+      }
+      header h1 {
+        text-align: center;
+        padding: 25px 0;
+        /* background-color: #28a745; */ /* Replaced */
+        background-image: linear-gradient(
+          to right,
+          var(--header-bg-start),
+          var(--header-bg-end)
+        ); /* Vibrant teal/blue gradient */
+        color: var(--header-text);
+        font-weight: 500;
+        font-size: 1.9em; /* Slightly larger */
+        letter-spacing: 1px; /* More spacing */
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1); /* Subtle text shadow */
+      }
+
+      /* Theme Switch Styles */
+      .theme-switch-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end; /* Position to the right */
+        padding: 10px 25px; /* Padding around the switch */
+        background-color: var(--container-bg);
+      }
+      .theme-label {
+        margin-left: 8px;
+        font-size: 0.9em;
+        color: var(--switch-label-text);
+      }
+      .theme-switch {
+        position: relative;
+        display: inline-block;
+        width: 50px; /* Width of the switch */
+        height: 24px; /* Height of the switch */
+      }
+      .theme-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: var(--switch-bg);
+        transition: 0.4s;
+      }
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 18px; /* Size of the circle */
+        width: 18px;
+        left: 3px; /* Position of the circle */
+        bottom: 3px;
+        background-color: var(--switch-slider);
+        transition: 0.4s;
+      }
+      input:checked + .slider {
+        background-color: var(--switch-bg-active);
+      }
+      input:focus + .slider {
+        box-shadow: 0 0 1px var(--switch-bg-active);
+      }
+      input:checked + .slider:before {
+        transform: translateX(26px); /* How far the circle moves */
+      }
+      .slider.round {
+        border-radius: 24px;
+      }
+      .slider.round:before {
+        border-radius: 50%;
+      }
+      /* End Theme Switch Styles */
+
+      /* Restore Tab Styles (using variables) */
+      .tab-buttons {
+        display: flex;
+        background-color: var(--tab-bar-bg);
+      }
+      .tab-button {
+        padding: 15px 20px; /* Keep updated padding */
+        cursor: pointer;
+        border: none;
+        border-bottom: 3px solid transparent; /* Keep bottom border active state */
+        background-color: transparent;
+        font-size: 1em;
+        font-weight: 500; /* Keep updated font weight */
+        transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+        flex-grow: 1;
+        text-align: center;
+        color: var(--tab-inactive-text);
+        margin-bottom: -1px; /* Keep overlap */
+      }
+      .tab-button:last-child {
+        /* No right border */
+      }
+      .tab-button:hover {
+        background-color: var(--tab-hover-bg);
+        color: var(--tab-hover-text);
+        border-bottom-color: var(--tab-hover-border);
+      }
+      .tab-button.active {
+        background-color: var(--container-bg);
+        color: var(--tab-active-text);
+        border-bottom-color: var(--tab-active-border);
+      }
+      .tab-content {
+        padding: 30px;
+        border: 1px solid var(--content-border);
+        border-top: none;
+        display: none;
+        background-color: var(--container-bg);
+        min-height: 200px;
+        transition: background-color 0.3s; /* Add transition */
+      }
+      .tab-content.active {
+        display: block;
+      }
+      .tab-content h2 {
+        /* Style titles within tabs */
+        margin-top: 0;
+        margin-bottom: 20px;
+        font-size: 1.4em;
+        color: var(--heading-color);
+        border-bottom: 2px solid var(--menu-item-border);
+        padding-bottom: 10px;
+      }
+
+      /* New Card Layout Styles */
+      .menus-container {
+        display: grid;
+        grid-template-columns: repeat(
+          auto-fit,
+          minmax(300px, 1fr)
+        ); /* Responsive grid */
+        gap: 25px; /* Space between cards */
+        padding: 25px; /* Padding around the grid */
+      }
+
+      .restaurant-card {
+        background-color: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+        padding: 20px;
+        border: 1px solid #e9ecef; /* Subtle border */
+        transition: box-shadow 0.3s ease, transform 0.3s ease;
+        min-height: 200px; /* Ensure minimum height */
+      }
+
+      .restaurant-card:hover {
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        transform: translateY(-3px);
+      }
+
+      .restaurant-card h2 {
+        /* Style card titles */
+        margin-top: 0; /* Remove default margin */
+        margin-bottom: 20px; /* Space below title */
+        font-size: 1.4em;
+        color: #28a745; /* Use theme green */
+        border-bottom: 2px solid #e9ecef;
+        padding-bottom: 10px;
+      }
+
+      /* Adjust loading/error/link styles to fit cards */
+      .restaurant-card .loading,
+      .restaurant-card .error-message {
+        margin-top: 20px;
+        font-style: italic;
+        color: #888;
+        text-align: center;
+      }
+      .restaurant-card .error-message {
+        color: #d8000c;
+        background-color: #ffd2d2;
+        border: 1px solid #d8000c;
+        padding: 10px;
+        border-radius: 5px;
+        font-style: normal;
+        text-align: left;
+      }
+      .restaurant-card .source-link {
+        display: inline-block;
+        margin-top: 20px;
+        font-size: 0.9em;
+        color: #28a745; /* Use theme green */
+        text-decoration: none; /* Remove underline */
+        border: 1px solid #28a745; /* Add border */
+        padding: 5px 12px; /* Padding */
+        border-radius: 4px; /* Rounded corners */
+        transition: background-color 0.2s, color 0.2s;
+      }
+      .restaurant-card .source-link:hover {
+        background-color: #28a745; /* Green background on hover */
+        color: #fff; /* White text on hover */
+      }
+      .menu-list {
+        list-style: none;
+        padding-left: 0;
+      }
+      .menu-item {
+        border-bottom: 1px solid var(--menu-item-border);
+        padding: 12px 5px; /* Adjust padding */
+        margin-bottom: 0; /* Remove margin */
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: background-color 0.15s ease; /* Faster transition */
+      }
+      .menu-item:last-child {
+        border-bottom: none; /* Remove border from last item */
+      }
+      .menu-item:hover {
+        background-color: var(--menu-item-hover-bg);
+        cursor: default;
+      }
+      .menu-item strong {
+        font-size: 1em;
+        font-weight: 500; /* Slightly bolder name */
+        color: var(--menu-item-name-text);
+        margin-bottom: 0;
+        margin-right: 15px; /* More space between name and price */
+        flex-grow: 1;
+      }
+      .price {
+        font-weight: 500; /* Match name weight */
+        margin-left: 0;
+        white-space: nowrap;
+        color: var(--menu-item-price-text);
+        font-size: 0.95em;
+      }
+      .description {
+        color: var(--menu-item-desc-text);
+        font-size: 0.85em;
+      }
+
+      /* Keep adjusted loading/error/link styles, apply to tabs */
+      .tab-content .loading {
+        margin-top: 20px;
+        font-style: italic;
+        color: var(--loading-text);
+        text-align: center;
+      }
+      .tab-content .error-message {
+        margin-top: 20px;
+        font-style: normal;
+        color: var(--error-text);
+        background-color: var(--error-bg);
+        border: 1px solid var(--error-text);
+        padding: 10px;
+        border-radius: 5px;
+        text-align: left;
+      }
+      .tab-content .source-link {
+        display: inline-block;
+        margin-top: 20px;
+        font-size: 0.9em;
+        color: var(--link-color);
+        text-decoration: none;
+        border: 1px solid var(--link-border);
+        padding: 5px 12px;
+        border-radius: 4px;
+        transition: background-color 0.2s, color 0.2s;
+      }
+      .tab-content .source-link:hover {
+        background-color: var(--link-hover-bg);
+        color: var(--link-hover-text);
+      }
+
+      /* Footer Styles */
+      footer {
+        text-align: center;
+        padding: 20px;
+        margin-top: 30px; /* Space above footer */
+        font-size: 0.85em;
+        color: var(--tab-inactive-text); /* Use a muted color */
+      }
+      footer a {
+        color: var(--link-color); /* Use theme link color */
+        text-decoration: none;
+      }
+      footer a:hover {
+        text-decoration: underline;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Today's Lunch Menus - Prague</h1>
+      </header>
+
+      <div class="theme-switch-wrapper">
+        <label class="theme-switch" for="theme-toggle">
+          <input type="checkbox" id="theme-toggle" />
+          <span class="slider round"></span>
+        </label>
+        <span class="theme-label">Dark Mode</span>
+      </div>
+
+      <!-- Restore Tab Container -->
+      <div class="tab-container">
+        <div class="tab-buttons">
+          <button
+            class="tab-button active"
+            data-tab="volha"
+            onclick="openTab(event, 'volha')"
+          >
+            Menza Volha
+          </button>
+          <button
+            class="tab-button"
+            data-tab="zatisi"
+            onclick="openTab(event, 'zatisi')"
+          >
+            Café Zátisí
+          </button>
+          <button
+            class="tab-button"
+            data-tab="spojovna"
+            onclick="openTab(event, 'spojovna')"
+          >
+            Pivovar Spojovna
+          </button>
+        </div>
+
+        <div id="volha" class="tab-content active">
+          <div class="loading">Loading Menza Volha...</div>
+        </div>
+
+        <div id="zatisi" class="tab-content">
+          <div class="loading">Loading Café Zátisí...</div>
+        </div>
+
+        <div id="spojovna" class="tab-content">
+          <div class="loading">Loading Pivovar Spojovna...</div>
+        </div>
+      </div>
+      <!-- End Restore Tab Container -->
+
+      <!-- Remove Card Container -->
+      <!--
+      <div class="menus-container"> 
+        <div id="volha" class="restaurant-card"> 
+          <div class="loading">Loading Menza Volha...</div>
+        </div>
+        <div id="zatisi" class="restaurant-card"> 
+           <div class="loading">Loading Café Zátisí...</div>
+        </div>
+        <div id="spojovna" class="restaurant-card"> 
+           <div class="loading">Loading Pivovar Spojovna...</div>
+        </div>
+      </div>
+      -->
+    </div>
+
+    <footer>
+      <p>
+        Menu data provided by
+        <a
+          href="https://claimate.tech"
+          target="_blank"
+          rel="noopener noreferrer"
+          >CLAIMATE Tech</a
+        >
+      </p>
+    </footer>
+
+    <script>
+      // --- Backend API URL ---
+      // If backend is running locally on default port:
+      const API_BASE_URL = "http://localhost:3000/api/menu";
+      // If backend is deployed elsewhere, change this URL:
+      // const API_BASE_URL = 'https://your-deployed-backend.com/api/menu';
+
+      // Keep track of loaded menus to avoid redundant fetches if desired
+      const loadedMenus = {};
+
+      async function loadMenu(restaurantId) {
+        const contentDiv = document.getElementById(restaurantId);
+        if (!contentDiv) return;
+
+        // Optional: Avoid reloading if already loaded
+        // if (loadedMenus[restaurantId]) {
+        //     console.log(`Menu for ${restaurantId} already loaded.`);
+        //     return;
+        // }
+
+        contentDiv.innerHTML = '<div class="loading">Loading Menu...</div>'; // Show loading indicator
+
+        try {
+          console.log(
+            `Workspaceing menu for ${restaurantId} from ${API_BASE_URL}/${restaurantId}`
+          );
+          const response = await fetch(`${API_BASE_URL}/${restaurantId}`);
+
+          if (!response.ok) {
+            // Handle HTTP errors from fetch itself (e.g., network error, 500 server error)
+            let errorText = `Error fetching menu: ${response.status} ${response.statusText}`;
+            try {
+              // Try to get more specific error from backend JSON response
+              const errorData = await response.json();
+              errorText = errorData.error || errorText;
+            } catch (e) {
+              /* Ignore if response is not JSON */
+            }
+            throw new Error(errorText);
+          }
+
+          const menuData = await response.json(); // Assuming backend sends JSON
+
+          // Handle errors reported within the JSON payload
+          if (menuData.error) {
+            console.error(`Backend error for ${restaurantId}:`, menuData.error);
+            throw new Error(menuData.error, {
+              cause: { sourceUrl: menuData.sourceUrl },
+            }); // Pass sourceUrl if available
+          }
+
+          console.log(`Received menu data for ${restaurantId}:`, menuData);
+
+          // Clear loading indicator and add title
+          contentDiv.innerHTML = `<h2>${
+            menuData.restaurantName || restaurantId
+          }</h2>`;
+
+          if (menuData.items && menuData.items.length > 0) {
+            let menuHtml = '<ul class="menu-list">';
+            menuData.items.forEach((item) => {
+              menuHtml += `<li class="menu-item">`;
+              menuHtml += `<strong>${item.name || "Unnamed Item"}</strong>`;
+              if (item.price && item.price !== "N/A") {
+                menuHtml += ` <span class="price">(${item.price})</span>`;
+              }
+              if (item.description) {
+                const cleanedDescription = item.description
+                  .replace(/\s\s+/g, " ")
+                  .trim();
+                if (cleanedDescription) {
+                  menuHtml += `<br><em class="description">${cleanedDescription}</em>`;
+                }
+              }
+              menuHtml += `</li>`;
+            });
+            menuHtml += "</ul>";
+            contentDiv.innerHTML += menuHtml;
+          } else {
+            contentDiv.innerHTML += "<p>Menu not available or empty today.</p>";
+          }
+
+          // Add link to original source for verification/fallback
+          if (menuData.sourceUrl) {
+            contentDiv.innerHTML += `<a href="${menuData.sourceUrl}" target="_blank" rel="noopener noreferrer" class="source-link">View Original Source</a>`;
+          }
+
+          loadedMenus[restaurantId] = true; // Mark as loaded
+        } catch (error) {
+          console.error(`Failed to load menu for ${restaurantId}:`, error);
+          contentDiv.innerHTML = `<h2>${restaurantId}</h2>`; // Reset title
+          contentDiv.innerHTML += `<div class="error-message">Sorry, couldn't load the menu automatically.<br>Error: ${error.message}</div>`;
+          // Try to add source link even on error if available
+          if (error.cause?.sourceUrl) {
+            contentDiv.innerHTML += `<a href="${error.cause.sourceUrl}" target="_blank" rel="noopener noreferrer" class="source-link">Try Viewing Original Source</a>`;
+          }
+        }
+      }
+
+      // Restore openTab function
+      function openTab(evt, tabName) {
+        var i, tabcontent, tablinks;
+        tabcontent = document.getElementsByClassName("tab-content");
+        for (i = 0; i < tabcontent.length; i++) {
+          tabcontent[i].style.display = "none";
+        }
+        tablinks = document.getElementsByClassName("tab-button");
+        for (i = 0; i < tablinks.length; i++) {
+          tablinks[i].className = tablinks[i].className.replace(" active", "");
+        }
+        document.getElementById(tabName).style.display = "block";
+        evt.currentTarget.className += " active";
+
+        // Load content when tab is opened
+        console.log(`Tab opened: ${tabName}. Loading menu...`);
+        loadMenu(tabName);
+      }
+
+      // Restore initial load for the default active tab
+      document.addEventListener("DOMContentLoaded", () => {
+        // Load default active tab
+        const firstActiveButton = document.querySelector(".tab-button.active");
+        if (firstActiveButton) {
+          const initialTabName = firstActiveButton.getAttribute("data-tab");
+          if (initialTabName) {
+            console.log(`Initial load for tab: ${initialTabName}`);
+            loadMenu(initialTabName);
+          }
+        }
+        // Remove card loading logic
+        /*
+        const restaurantCards = document.querySelectorAll('.restaurant-card');
+        restaurantCards.forEach(card => {
+            const restaurantId = card.id;
+            if(restaurantId) {
+                console.log(`Initial load for card: ${restaurantId}`);
+                loadMenu(restaurantId); 
+            }
+        });
+        */
+      });
+
+      // --- Theme Switch Logic ---
+      const themeToggle = document.getElementById("theme-toggle");
+      const currentTheme = localStorage.getItem("theme");
+
+      // Function to set the theme
+      function setTheme(theme) {
+        if (theme === "dark") {
+          document.body.classList.add("dark-theme");
+          themeToggle.checked = true;
+          localStorage.setItem("theme", "dark");
+        } else {
+          document.body.classList.remove("dark-theme");
+          themeToggle.checked = false;
+          localStorage.setItem("theme", "light");
+        }
+      }
+
+      // Apply the current theme on initial load
+      if (currentTheme) {
+        setTheme(currentTheme);
+      } else {
+        // Default to dark theme if no preference is saved
+        setTheme("dark");
+      }
+
+      // Listener for toggle changes
+      themeToggle.addEventListener("change", () => {
+        if (themeToggle.checked) {
+          setTheme("dark");
+        } else {
+          setTheme("light");
+        }
+      });
+      // --- End Theme Switch Logic ---
+    </script>
+  </body>
 </html>
