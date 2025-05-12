@@ -493,10 +493,11 @@
 
     <script>
       // --- Backend API URL ---
+      // Use a relative path so it works both locally and when deployed
+      const API_BASE_URL = "/api/menu";
       // If backend is running locally on default port:
-      const API_BASE_URL = "http://localhost:3000/api/menu";
+      // const API_BASE_URL = "http://localhost:3000/api/menu";
       // If backend is deployed elsewhere, change this URL:
-      // const API_BASE_URL = 'https://your-deployed-backend.com/api/menu';
 
       // Keep track of loaded menus to avoid redundant fetches if desired
       const loadedMenus = {};
