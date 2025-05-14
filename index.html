@@ -61,6 +61,33 @@
         --switch-label-text: var(--text-color);
       }
 
+      body {
+        font-family: "Roboto", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        line-height: 1.6;
+        padding: 0; /* Remove padding, container handles it */
+        margin: 0;
+        /* background-color: var(--body-bg); */ /* Will be replaced by animated gradient */
+        color: var(--text-color);
+        transition: background-color 0.3s, color 0.3s; /* Add transition to body */
+
+        /* Animated Gradient Background */
+        background: linear-gradient(-45deg, #b1e1e2, #f4dada, #d1e0fc, #f0f7da);
+        background-size: 400% 400%;
+        animation: moveGradient 20s ease infinite; /* Faster animation */
+      }
+
+      @keyframes moveGradient {
+        0% {
+          background-position: 0% 50%;
+        }
+        50% {
+          background-position: 100% 50%;
+        }
+        100% {
+          background-position: 0% 50%;
+        }
+      }
+
       body.dark-theme {
         --body-bg: #1f2128; /* Dark blue/grey */
         --text-color: #c5c8d2; /* Slightly lighter text */
@@ -94,6 +121,11 @@
         --switch-bg-active: var(--header-bg-end);
         --switch-slider: #f1f1f1;
         --switch-label-text: var(--text-color);
+
+        /* Dark Theme Animated Gradient Background */
+        background: linear-gradient(-45deg, #3a6073, #16222a, #3a4352, #2a4158);
+        background-size: 400% 400%;
+        animation: moveGradient 25s ease infinite; /* Faster animation */
       }
 
       /* Basic Reset */
@@ -101,15 +133,6 @@
         margin: 0;
         padding: 0;
         box-sizing: border-box;
-      }
-      body {
-        font-family: "Roboto", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-        line-height: 1.6;
-        padding: 0; /* Remove padding, container handles it */
-        margin: 0;
-        background-color: var(--body-bg);
-        color: var(--text-color);
-        transition: background-color 0.3s, color 0.3s; /* Add transition to body */
       }
       .container {
         max-width: 800px;
@@ -361,10 +384,16 @@
 
       /* Keep adjusted loading/error/link styles, apply to tabs */
       .tab-content .loading {
+        display: flex; /* Use flex to center content */
+        flex-direction: column; /* Stack spinner and text vertically */
+        align-items: center; /* Center horizontally */
+        justify-content: center; /* Center vertically */
         margin-top: 20px;
+        padding: 20px; /* Add some padding */
         font-style: italic;
         color: var(--loading-text);
         text-align: center;
+        min-height: 100px; /* Ensure it has some height */
       }
       .tab-content .error-message {
         margin-top: 20px;
@@ -407,6 +436,25 @@
       footer a:hover {
         text-decoration: underline;
       }
+
+      .loader-spinner {
+        border: 4px solid var(--menu-item-border); /* Lighter border for the track */
+        border-top: 4px solid var(--tab-active-text); /* Active color for the spinner part */
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 10px auto; /* Center spinner and add space below */
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
     </style>
   </head>
   <body>
@@ -447,6 +495,13 @@
           >
             Pivovar Spojovna
           </button>
+          <button
+            class="tab-button"
+            data-tab="rangoli"
+            onclick="openTab(event, 'rangoli')"
+          >
+            Rangoli Kunratice
+          </button>
         </div>
 
         <div id="volha" class="tab-content active">
@@ -458,7 +513,17 @@
         </div>
 
         <div id="spojovna" class="tab-content">
-          <div class="loading">Loading Pivovar Spojovna...</div>
+          <div class="loading">
+            <div class="loader-spinner"></div>
+            <div>Loading Pivovar Spojovna...</div>
+          </div>
+        </div>
+
+        <div id="rangoli" class="tab-content">
+          <div class="loading">
+            <div class="loader-spinner"></div>
+            <div>Loading Rangoli Kunratice...</div>
+          </div>
         </div>
       </div>
       <!-- End Restore Tab Container -->
@@ -500,24 +565,69 @@
       // If backend is deployed elsewhere, change this URL:
 
       // Keep track of loaded menus to avoid redundant fetches if desired
-      const loadedMenus = {};
+      const loadedMenus = {}; // Will store { date: "YYYY-MM-DD", data: menuData }
+
+      // Helper function to display menu data
+      function displayMenu(contentDiv, menuData, restaurantId) {
+        contentDiv.innerHTML = `<h2>${
+          menuData.restaurantName || restaurantId
+        }</h2>`;
+
+        if (menuData.items && menuData.items.length > 0) {
+          let menuHtml = '<ul class="menu-list">';
+          menuData.items.forEach((item) => {
+            menuHtml += `<li class="menu-item">`;
+            menuHtml += `<strong>${item.name || "Unnamed Item"}</strong>`;
+            if (item.price && item.price !== "N/A") {
+              menuHtml += ` <span class="price">(${item.price})</span>`;
+            }
+            if (item.description) {
+              const cleanedDescription = item.description
+                .replace(/\s\s+/g, " ")
+                .trim();
+              if (cleanedDescription) {
+                menuHtml += `<br><em class="description">${cleanedDescription}</em>`;
+              }
+            }
+            menuHtml += `</li>`;
+          });
+          menuHtml += "</ul>";
+          contentDiv.innerHTML += menuHtml;
+        } else {
+          contentDiv.innerHTML += "<p>Menu not available or empty today.</p>";
+        }
+
+        // Add link to original source for verification/fallback
+        if (menuData.sourceUrl) {
+          contentDiv.innerHTML += `<a href="${menuData.sourceUrl}" target="_blank" rel="noopener noreferrer" class="source-link">View Original Source</a>`;
+        }
+      }
 
       async function loadMenu(restaurantId) {
         const contentDiv = document.getElementById(restaurantId);
         if (!contentDiv) return;
 
-        // Optional: Avoid reloading if already loaded
-        // if (loadedMenus[restaurantId]) {
-        //     console.log(`Menu for ${restaurantId} already loaded.`);
-        //     return;
-        // }
+        const todayString = new Date().toDateString(); // Get current date as a string
 
-        contentDiv.innerHTML = '<div class="loading">Loading Menu...</div>'; // Show loading indicator
+        // Check if menu for this restaurant was already loaded today
+        if (
+          loadedMenus[restaurantId] &&
+          loadedMenus[restaurantId].date === todayString
+        ) {
+          // console.log(
+          //   `Menu for ${restaurantId} already loaded today. Displaying cached data.`
+          // );
+          displayMenu(contentDiv, loadedMenus[restaurantId].data, restaurantId);
+          return;
+        }
+
+        contentDiv.innerHTML =
+          '<div class="loading"><div class="loader-spinner"></div><div>Loading Menu...</div></div>'; // Show loading indicator
 
         try {
-          console.log(
-            `Workspaceing menu for ${restaurantId} from ${API_BASE_URL}/${restaurantId}`
-          );
+          // console.log(
+          //   `Workspaceing menu for ${restaurantId} from ${API_BASE_URL}/${restaurantId}`
+          // );
           const response = await fetch(`${API_BASE_URL}/${restaurantId}`);
 
           if (!response.ok) {
@@ -537,51 +647,21 @@
 
           // Handle errors reported within the JSON payload
           if (menuData.error) {
-            console.error(`Backend error for ${restaurantId}:`, menuData.error);
+            // console.error(`Backend error for ${restaurantId}:`, menuData.error);
             throw new Error(menuData.error, {
               cause: { sourceUrl: menuData.sourceUrl },
             }); // Pass sourceUrl if available
           }
 
-          console.log(`Received menu data for ${restaurantId}:`, menuData);
+          // console.log(`Received menu data for ${restaurantId}:`, menuData);
 
-          // Clear loading indicator and add title
-          contentDiv.innerHTML = `<h2>${
-            menuData.restaurantName || restaurantId
-          }</h2>`;
+          // Store the fetched data and today's date
+          loadedMenus[restaurantId] = { date: todayString, data: menuData };
 
-          if (menuData.items && menuData.items.length > 0) {
-            let menuHtml = '<ul class="menu-list">';
-            menuData.items.forEach((item) => {
-              menuHtml += `<li class="menu-item">`;
-              menuHtml += `<strong>${item.name || "Unnamed Item"}</strong>`;
-              if (item.price && item.price !== "N/A") {
-                menuHtml += ` <span class="price">(${item.price})</span>`;
-              }
-              if (item.description) {
-                const cleanedDescription = item.description
-                  .replace(/\s\s+/g, " ")
-                  .trim();
-                if (cleanedDescription) {
-                  menuHtml += `<br><em class="description">${cleanedDescription}</em>`;
-                }
-              }
-              menuHtml += `</li>`;
-            });
-            menuHtml += "</ul>";
-            contentDiv.innerHTML += menuHtml;
-          } else {
-            contentDiv.innerHTML += "<p>Menu not available or empty today.</p>";
-          }
-
-          // Add link to original source for verification/fallback
-          if (menuData.sourceUrl) {
-            contentDiv.innerHTML += `<a href="${menuData.sourceUrl}" target="_blank" rel="noopener noreferrer" class="source-link">View Original Source</a>`;
-          }
-
-          loadedMenus[restaurantId] = true; // Mark as loaded
+          // Display the menu using the helper function
+          displayMenu(contentDiv, menuData, restaurantId);
         } catch (error) {
-          console.error(`Failed to load menu for ${restaurantId}:`, error);
+          // console.error(`Failed to load menu for ${restaurantId}:`, error);
           contentDiv.innerHTML = `<h2>${restaurantId}</h2>`; // Reset title
           contentDiv.innerHTML += `<div class="error-message">Sorry, couldn't load the menu automatically.<br>Error: ${error.message}</div>`;
           // Try to add source link even on error if available
@@ -606,7 +686,7 @@
         evt.currentTarget.className += " active";
 
         // Load content when tab is opened
-        console.log(`Tab opened: ${tabName}. Loading menu...`);
+        // console.log(`Tab opened: ${tabName}. Loading menu...`);
         loadMenu(tabName);
       }
 
@@ -617,7 +697,7 @@
         if (firstActiveButton) {
           const initialTabName = firstActiveButton.getAttribute("data-tab");
           if (initialTabName) {
-            console.log(`Initial load for tab: ${initialTabName}`);
+            // console.log(`Initial load for tab: ${initialTabName}`);
             loadMenu(initialTabName);
           }
         }
