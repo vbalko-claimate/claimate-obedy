@@ -378,8 +378,10 @@
         font-size: 0.95em;
       }
       .description {
+        display: block; /* Ensure it takes its own line if not already */
+        margin-top: 4px; /* Add a little space above the description */
         color: var(--menu-item-desc-text);
-        font-size: 0.85em;
+        font-size: 0.82em; /* Slightly smaller than before */
       }
 
       /* Keep adjusted loading/error/link styles, apply to tabs */
@@ -437,6 +439,21 @@
         text-decoration: underline;
       }
 
+      .app-info {
+        font-size: 0.8em;
+        color: var(--tab-inactive-text); /* Use a muted color */
+        margin-top: 5px; /* Less space above than the main footer text */
+      }
+
+      .app-info a {
+        color: var(--link-color);
+        text-decoration: none;
+      }
+
+      .app-info a:hover {
+        text-decoration: underline;
+      }
+
       .loader-spinner {
         border: 4px solid var(--menu-item-border); /* Lighter border for the track */
         border-top: 4px solid var(--tab-active-text); /* Active color for the spinner part */
@@ -454,6 +471,15 @@
         100% {
           transform: rotate(360deg);
         }
+      }
+
+      .last-updated {
+        font-size: 0.8em;
+        font-style: italic;
+        color: var(--menu-item-desc-text); /* Use a muted color */
+        margin-top: 15px; /* Space above the timestamp */
+        margin-bottom: 10px; /* Space below before the source link */
+        text-align: right; /* Align to the right */
       }
     </style>
   </head>
@@ -554,6 +580,9 @@
           >CLAIMATE Tech</a
         >
       </p>
+      <p class="app-info">
+        <!-- This will be populated by JavaScript -->
+      </p>
     </footer>
 
     <script>
@@ -595,6 +624,18 @@
           contentDiv.innerHTML += menuHtml;
         } else {
           contentDiv.innerHTML += "<p>Menu not available or empty today.</p>";
+        }
+
+        // Add "Last Updated" timestamp
+        if (loadedMenus[restaurantId] && loadedMenus[restaurantId].date) {
+          const updateDate = new Date(loadedMenus[restaurantId].date);
+          // Format date as DD.MM.YYYY or similar suitable locale string
+          const formattedDate = updateDate.toLocaleDateString(undefined, {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+          });
+          contentDiv.innerHTML += `<p class="last-updated">Last updated: ${formattedDate}</p>`;
         }
 
         // Add link to original source for verification/fallback
@@ -701,6 +742,10 @@
             loadMenu(initialTabName);
           }
         }
+
+        // Load app info
+        loadAppInfo();
+
         // Remove card loading logic
         /*
         const restaurantCards = document.querySelectorAll('.restaurant-card');
@@ -748,6 +793,32 @@
         }
       });
       // --- End Theme Switch Logic ---
+
+      // --- App Info Logic ---
+      async function loadAppInfo() {
+        try {
+          const response = await fetch("/api/app-info");
+          if (!response.ok) {
+            throw new Error("Failed to fetch app info");
+          }
+          const appInfo = await response.json();
+
+          // Format and display the app info in the footer
+          const appInfoElement = document.querySelector(".app-info");
+          if (appInfoElement) {
+            appInfoElement.innerHTML = `
+              Version ${appInfo.version} | 
+              <span title="Last commit on ${appInfo.lastCommit.date}">
+                Commit <a href="${appInfo.lastCommit.url}" target="_blank" rel="noopener noreferrer">
+                ${appInfo.lastCommit.hash}
+                </a>
+              </span>
+            `;
+          }
+        } catch (error) {
+          console.error("Error loading app info:", error);
+        }
+      }
     </script>
   </body>
 </html>

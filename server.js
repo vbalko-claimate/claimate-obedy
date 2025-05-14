@@ -6,6 +6,7 @@ const fetch = require("node-fetch"); // For fetching PDF buffer
 const cors = require("cors"); // To allow frontend requests
 const puppeteer = require("puppeteer"); // Add Puppeteer
 const path = require("path"); // To serve static files like index.html
+const { execSync } = require("child_process"); // To execute Git commands
 
 const app = express();
 const PORT = process.env.PORT || 3000; // Use environment port or 3000
@@ -705,69 +706,57 @@ async function parseRangoliMenu(url) {
   }
 }
 
+// --- Restaurant Configuration ---
+const restaurantConfig = {
+  volha: {
+    name: "Menza Volha",
+    url: "https://menzavolha.cz/jidelni-listek/",
+    parser: parseVolhaMenu,
+  },
+  zatisi: {
+    name: "Café Zátisí",
+    url: "https://restaurantcafe.cz/restaurant-cafe-zatisi/specialni-menu/",
+    parser: parseZatisiMenu,
+  },
+  spojovna: {
+    name: "Pivovar Spojovna",
+    url: "https://pivovarspojovna.cz/menu/",
+    parser: parseSpojovnaMenuAxios, // Using the Axios version
+    // originalPuppeteerParser: parseSpojovnaMenu, // Keep if needed for quick switch
+  },
+  rangoli: {
+    name: "Rangoli Kunratice",
+    url: "https://www.rangolikunratice.cz/cs/#daily-menu",
+    parser: parseRangoliMenu,
+  },
+};
+
 // --- API Endpoint ---
 app.get("/api/menu/:restaurant", async (req, res) => {
-  const restaurant = req.params.restaurant;
-  let menuResult; // Renamed from menuData to avoid confusion before adding metadata
+  const restaurantId = req.params.restaurant;
+  let menuResult;
 
-  // console.log(`Received request for restaurant: ${restaurant}`);
+  // console.log(`Received request for restaurant: ${restaurantId}`);
 
-  switch (restaurant) {
-    case "volha":
-      // --- Use the new parser for Volha, pointing to the correct page ---
-      const volhaUrl = "https://menzavolha.cz/jidelni-listek/"; // Corrected URL
-      menuResult = await parseVolhaMenu(volhaUrl);
-      menuResult.restaurantName = "Menza Volha";
-      menuResult.sourceUrl = menuResult.foundPdfUrl || volhaUrl; // Use PDF url if found
-      // --- Remove hardcoded data ---
-      // menuResult = {
-      //   restaurantName: "Menza Volha",
-      //   sourceUrl: "https://menzavolha.cz/",
-      //   items: [
-      //     { name: "Polévka zeleninová s kuskusem", price: "35 Kč" },
-      //     { name: "Vepřové výpečky, houskový knedlík, zelí", price: "129 Kč" },
-      //     { name: "Kuřecí řízek, brambory, okurka", price: "139 Kč" },
-      //     {
-      //       name: "Vegetariánské rizoto se zeleninou a sýrem",
-      //       price: "119 Kč",
-      //     },
-      //     { name: "Těstovinový salát s kuřecím masem", price: "125 Kč" },
-      //   ],
-      // };
-      break;
+  const config = restaurantConfig[restaurantId];
 
-    case "zatisi":
-      const zatisiUrl =
-        "https://restaurantcafe.cz/restaurant-cafe-zatisi/specialni-menu/";
-      menuResult = await parseZatisiMenu(zatisiUrl);
-      menuResult.restaurantName = "Café Zátisí"; // Add metadata after parsing
-      menuResult.sourceUrl = zatisiUrl;
-      break;
-
-    case "spojovna":
-      const spojovnaUrl = "https://pivovarspojovna.cz/menu/";
-      // menuResult = await parseSpojovnaMenu(spojovnaUrl); // Keep old Puppeteer call commented
-      menuResult = await parseSpojovnaMenuAxios(spojovnaUrl); // Use new Axios parser
-      menuResult.restaurantName = "Pivovar Spojovna"; // Add metadata after parsing
-      menuResult.sourceUrl = spojovnaUrl;
-      break;
-
-    case "rangoli":
-      const rangoliUrl = "https://www.rangolikunratice.cz/cs/#daily-menu";
-      menuResult = await parseRangoliMenu(rangoliUrl);
-      menuResult.restaurantName = "Rangoli Kunratice";
-      menuResult.sourceUrl = rangoliUrl;
-      break;
-
-    default:
-      return res.status(404).json({ error: "Restaurant not found" });
+  if (config) {
+    menuResult = await config.parser(config.url);
+    menuResult.restaurantName = config.name;
+    menuResult.sourceUrl = config.url;
+  } else {
+    return res.status(404).json({ error: "Restaurant not found" });
   }
 
   // Send response - Ensure consistent structure even if items array is empty
-  if (menuResult.error && !menuResult.items) {
-    // If error and no items (e.g., PDF error)
+  if (
+    menuResult.error &&
+    (!menuResult.items || menuResult.items.length === 0)
+  ) {
+    // Check items too
+    // If error and no items (e.g., PDF error, or parser returns error with empty items)
     res.status(200).json({
-      restaurantName: menuResult.restaurantName || restaurant, // Use provided name or fallback
+      restaurantName: menuResult.restaurantName || restaurantId, // Use provided name or fallback
       sourceUrl: menuResult.sourceUrl || "#", // Use provided URL or fallback
       items: [],
       error: menuResult.error,
@@ -775,12 +764,80 @@ app.get("/api/menu/:restaurant", async (req, res) => {
   } else {
     // Includes cases where items might be empty due to parsing logic (like Spojovna daily not found)
     res.status(200).json({
-      restaurantName: menuResult.restaurantName || restaurant,
+      restaurantName: menuResult.restaurantName || restaurantId,
       sourceUrl: menuResult.sourceUrl || "#",
       items: menuResult.items || [], // Ensure items is always an array
-      error: menuResult.error || null, // Include error if present (e.g., Spojovna daily not found)
+      error: menuResult.error || null, // Include error if present
     });
   }
+});
+
+// --- App Info (Version and GitHub link) ---
+const GITHUB_REPO_URL = "https://github.com/vbalko-claimate/claimate-obedy";
+
+// Generate a dynamic version based on git history
+let dynamicVersion = "0.0.0";
+let lastCommitHash = "";
+let lastCommitDate = "";
+
+try {
+  // Get the short commit hash
+  lastCommitHash = execSync("git rev-parse --short HEAD").toString().trim();
+
+  // Get the commit date formatted as YYYY-MM-DD
+  lastCommitDate = execSync("git log -1 --format=%cd --date=short")
+    .toString()
+    .trim();
+
+  // Count total number of commits for patch version
+  const commitCount = parseInt(
+    execSync("git rev-list --count HEAD").toString().trim(),
+    10
+  );
+
+  // Extract year and month from the commit date (for minor version)
+  const commitDateParts = lastCommitDate.split("-");
+  const yearLastTwo = commitDateParts[0].substring(2); // Last two digits of year
+  const month = commitDateParts[1];
+
+  // Try to get the most recent tag for major version, defaulting to 0 if none exist
+  let majorVersion = 1; // Default major version
+  try {
+    // Try to get the most recent tag that looks like v1.2.3 or 1.2.3
+    const tagExec = execSync(
+      'git describe --tags --abbrev=0 2> /dev/null || echo "v0"'
+    )
+      .toString()
+      .trim();
+    // Extract the number after 'v' if it exists
+    const tagMatch = tagExec.match(/^v?(\d+)/);
+    if (tagMatch && tagMatch[1]) {
+      majorVersion = parseInt(tagMatch[1], 10);
+    }
+  } catch (tagErr) {
+    // If no tags or error, keep default major version
+  }
+
+  // Format as MAJOR.YYMM.COMMITS-HASH
+  dynamicVersion = `${majorVersion}.${yearLastTwo}${month}.${commitCount}-${lastCommitHash}`;
+} catch (err) {
+  console.error("Failed to generate dynamic version:", err);
+  // Fallback to static version if git commands fail
+  dynamicVersion = "1.0.0-unknown";
+  lastCommitHash = "unknown";
+  lastCommitDate = "unknown";
+}
+
+app.get("/api/app-info", (req, res) => {
+  res.json({
+    version: dynamicVersion,
+    githubRepoUrl: GITHUB_REPO_URL,
+    lastCommit: {
+      hash: lastCommitHash,
+      date: lastCommitDate,
+      url: `${GITHUB_REPO_URL}/commit/${lastCommitHash}`,
+    },
+  });
 });
 
 // --- Route to serve the frontend index.html ---
