@@ -430,145 +430,93 @@ async function parseVolhaMenu(url) {
 // --- Helper function to fetch and parse HTML (example for Zatisi) ---
 async function parseZatisiMenu(url) {
   try {
-    console.log(`Fetching HTML from: ${url}`);
-    const { data: zatisiHtml } = await axios.get(url);
-    const $ = cheerio.load(zatisiHtml);
+    // console.log(`Fetching Zatisi HTML (new parser - v2) from: ${url}`);
+    const { data: html } = await axios.get(url);
+    const $ = cheerio.load(html);
 
     const items = [];
-    // More targeted approach: Look for main content areas first
-    const contentSelectors = [
-      "section.specialni-listek", // **** PRIORITIZE THIS SELECTOR ****
-      ".specialni-listek",
-      "article.type-page .entry-content", // Common WordPress structure
-      ".content-area article",
-      'main[role="main"]',
-      "#main-content",
-      ".main-content",
-      ".page-content",
-      "article",
-      "section.menu-section", // If there's a specific section
-      'div[class*="content"]',
-      'div[id*="content"]',
-    ];
+    const addedItems = new Set(); // For de-duplication
 
-    let menuContentFound = false;
-
-    for (const selector of contentSelectors) {
-      const mainContent = $(selector);
-      if (mainContent.length > 0) {
-        mainContent
-          .find("p, div, li, h3, h4, .menu-item, .dish")
-          .each((i, el) => {
-            // Get text from the element itself and immediate children spans/divs to catch name/price split across elements
-            let elementText = $(el)
-              .clone()
-              .children()
-              .remove()
-              .end()
-              .text()
-              .trim(); // Text of the element itself
-            let childrenText = $(el)
-              .children("span, div")
-              .map((_, child) => $(child).text().trim())
-              .get()
-              .join(" ");
-            let text = (elementText + " " + childrenText)
-              .replace(/\s\s+/g, " ")
-              .trim();
-
-            // Skip if the text is clearly just a section title (e.g., all uppercase, short)
-            if (
-              text.length < 80 &&
-              text === text.toUpperCase() &&
-              !text.includes("Kč")
-            ) {
-              return; // Continue to next element
-            }
-
-            // Regex to find item name and price (e.g., "Item Name... 123 Kč")
-            // It tries to capture text before the price, skipping over potential allergen info in parentheses.
-            const priceMatch = text.match(
-              /^(.*?)(?:\s\(.*\))?\s*(\d{2,4}(?:[.,]\d{2})?)\s*(?:Kč|,-)/i
-            );
-
-            if (priceMatch) {
-              let name = priceMatch[1].trim(); // Group 1 is the name
-              const priceValue = priceMatch[2].replace(",", "."); // Group 2 is the price number
-              const price = priceValue + (text.includes(",-") ? ",-" : " Kč"); // Reconstruct price with correct suffix
-
-              // Clean up name: remove trailing dots, commas, or common prefixes like "-"
-              name = name.replace(/[.,\s-]+$/, "").trim();
-              // If name is very short, it might be a category, try to get text from children
-              if (name.length < 5 && $(el).children().length > 0) {
-                name = $(el)
-                  .children()
-                  .first()
-                  .text()
-                  .trim()
-                  .replace(/[.,\s-]+$/, "")
-                  .trim();
-              }
-
-              if (
-                name.length > 2 &&
-                name.toLowerCase() !== "menu" &&
-                !/denní menu|special|nabídka/i.test(name) &&
-                !items.some(
-                  (item) => item.name === name && item.price === price
-                )
-              ) {
-                items.push({ name, price });
-                menuContentFound = true;
-              }
-            } else if (text.includes("Kč") || text.includes(",-")) {
-              // Fallback for lines that might just contain price or oddly formatted items
-              const priceOnlyMatch = text.match(
-                /(\d{2,4}(?:[.,]\d{2})?)\s*(?:Kč|,-)/i
-              );
-              if (priceOnlyMatch) {
-                const matchedPriceString = priceOnlyMatch[0];
-                const priceValue = priceOnlyMatch[1].replace(",", ".");
-                const price =
-                  priceValue +
-                  (matchedPriceString.includes(",-") ? ",-" : " Kč");
-                let name = text
-                  .replace(matchedPriceString, "")
-                  .trim()
-                  .replace(/[.,\s-]+$/, "")
-                  .trim();
-                if (
-                  name.length > 2 &&
-                  name.toLowerCase() !== "menu" &&
-                  !/denní menu|special|nabídka/i.test(name) &&
-                  !items.some(
-                    (item) => item.name === name && item.price === price
-                  )
-                ) {
-                  items.push({ name, price });
-                  menuContentFound = true;
-                }
-              }
-            }
-          });
-        if (menuContentFound) break; // Stop if items are found in this content area
-      }
-    }
-
-    if (items.length === 0) {
-      console.log(
-        "No menu items found for Zatisi after targeted content search."
-      );
+    // Target the main menu section first
+    const menuContainer = $("section.specialni-listek");
+    if (menuContainer.length === 0) {
+      // console.warn("Zatisi (new parser v2): section.specialni-listek not found.");
       return {
-        error: "Could not find menu items. Please check the website directly.",
-        sourceUrl: url,
+        items: [],
+        error: "Main menu container (section.specialni-listek) not found.",
       };
     }
+
+    menuContainer.find("div.listek-sekce").each((i, sekceEl) => {
+      const section = $(sekceEl);
+      // const categoryTitleElement = section.find('h2'); // Category title, if needed in future
+      // if (categoryTitleElement.length > 0) {
+      //   console.log("Category:", categoryTitleElement.text().trim());
+      // }
+
+      section.find("div.listek-polozka").each((j, polozkaEl) => {
+        const itemElement = $(polozkaEl);
+
+        const textElement = itemElement.find("div.listek-text");
+        // Price is a direct child span of listek-polozka, not listek-mnozstvi
+        const priceElement = itemElement
+          .children("span:not(.listek-mnozstvi)")
+          .first();
+        const quantityElement = itemElement.find("span.listek-mnozstvi");
+
+        let itemName = "";
+        let itemPrice = "";
+        let itemQuantity = "";
+
+        if (quantityElement.length > 0) {
+          itemQuantity = quantityElement.text().trim();
+        }
+
+        if (textElement.length > 0) {
+          // Get all text from children, including <strong> and <i>
+          itemName = textElement
+            .contents()
+            .map(function () {
+              return $(this).text().trim();
+            })
+            .get()
+            .join(" ")
+            .replace(/\s\s+/g, " ")
+            .trim();
+        }
+
+        if (priceElement.length > 0) {
+          itemPrice = priceElement.text().trim();
+        }
+
+        let fullName = itemName;
+        if (itemQuantity) {
+          fullName = `${itemQuantity} ${itemName}`.trim();
+        }
+
+        // Basic validation and de-duplication
+        if (fullName && itemPrice) {
+          const signature = `${fullName}|${itemPrice}`;
+          if (!addedItems.has(signature)) {
+            items.push({ name: fullName, price: itemPrice });
+            addedItems.add(signature);
+            // console.log(`Zatisi (new parser v2) - Added: ${fullName} | ${itemPrice}`);
+          }
+        }
+      });
+    });
+
+    if (items.length === 0) {
+      // console.log("Zatisi (new parser v2): No menu items extracted after parsing.");
+    }
+
     return { items };
   } catch (error) {
-    console.error("Error parsing Zatisi HTML:", error);
+    // console.error("Error in new parseZatisiMenu (v2):", error);
     return {
-      error: `Failed to parse Zatisi menu. ${error.message}`,
+      error: `Failed to parse Zatisi menu (new parser v2). ${error.message}`,
       sourceUrl: url,
+      items: [],
     };
   }
 }
