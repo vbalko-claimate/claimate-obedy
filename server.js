@@ -663,7 +663,7 @@ const restaurantConfig = {
   },
   zatisi: {
     name: "Café Zátisí",
-    url: "https://restaurantcafe.cz/restaurant-cafe-zatisi/specialni-menu/",
+    url: "https://restaurantcafe.cz/restaurant-cafe-zatisi/specialni-menu-2/",
     parser: parseZatisiMenu,
   },
   spojovna: {
