@@ -1,4 +1,4 @@
-# Prague Daily Menu Scraper
+# Prague Daily Menu Scraper 
 
 This project provides a simple web application to display the daily lunch menus for selected Prague restaurants:
 
