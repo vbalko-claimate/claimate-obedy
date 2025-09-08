@@ -50,3 +50,4 @@ The frontend will automatically fetch menu data from the running backend server 
 - Web scraping can be fragile. If the restaurant websites change their structure, the scrapers (especially for Volha and Spojovna) may need updating.
 - The Spojovna scraper uses Puppeteer, which involves running a headless browser instance. This is necessary for that site but can be resource-intensive and slower than direct HTML/PDF fetching.
 - Menu parsing (especially from PDFs like Volha's) relies on specific text patterns and might need adjustments if the menu format changes significantly.
+test change
