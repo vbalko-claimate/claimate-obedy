@@ -28,12 +28,13 @@
       <header>
         <h1>Today's Lunch Menus</h1>
         <div class="header-date" id="header-date"></div>
+        <div class="view-switcher" id="view-switcher">
+          <button class="view-btn active" data-view="cards">All</button>
+          <button class="view-btn" data-view="tabs">By restaurant</button>
+        </div>
       </header>
 
       <div class="toolbar">
-        <div class="toolbar-left">
-          <button class="view-toggle-btn" id="view-toggle" aria-label="Switch between tab and card view">Tabs</button>
-        </div>
         <div class="toolbar-right">
           <div class="theme-switch-wrapper">
             <label class="theme-switch" for="theme-toggle" aria-label="Toggle dark mode">

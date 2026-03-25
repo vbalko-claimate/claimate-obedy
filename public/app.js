@@ -154,21 +154,18 @@ function setView(mode) {
 
   const tabView = document.getElementById("tab-view");
   const cardView = document.getElementById("card-view");
-  const toggleBtn = document.getElementById("view-toggle");
 
   if (mode === "tabs") {
     tabView.style.display = "";
     cardView.className = "cards-container";
-    toggleBtn.textContent = "Cards";
   } else {
     tabView.style.display = "none";
     cardView.className = "cards-container active";
-    toggleBtn.textContent = "Tabs";
   }
-}
 
-function toggleView() {
-  setView(currentView === "tabs" ? "cards" : "tabs");
+  document.querySelectorAll(".view-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.view === mode);
+  });
 }
 
 // --- Tab Navigation ---
@@ -290,8 +287,10 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.addEventListener("keydown", handleTabKeyboard);
   });
 
-  // Bind view toggle
-  document.getElementById("view-toggle").addEventListener("click", toggleView);
+  // Bind view switcher
+  document.querySelectorAll(".view-btn").forEach((btn) => {
+    btn.addEventListener("click", () => setView(btn.dataset.view));
+  });
 
   // Load all menus (both views share data via loadedMenus cache)
   loadAllMenus();
