@@ -35,6 +35,15 @@ async function parsePdfMenu(url) {
       );
       if (dayMatch) {
         currentParsingDay = dayMatch[1];
+        // The soup is often on the same line as the day header
+        // e.g. "Středa:     Polévka:  Vegetariánský boršč"
+        const soupMatch = line.match(/Polévka:\s*(.*?)(?:\s+\(.*\))?$/i);
+        if (soupMatch && currentParsingDay === todayCzech) {
+          const soupName = soupMatch[1].split(" (")[0].trim();
+          if (soupName && soupName.length > 2) {
+            items.push({ name: `Polévka: ${soupName}`, price: "N/A" });
+          }
+        }
         continue;
       }
 
