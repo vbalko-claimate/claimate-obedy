@@ -52,8 +52,8 @@ const restaurantConfig = {
     name: "Rangoli Kunratice",
     url: "https://www.rangolikunratice.cz/cs/#daily-menu",
     parser: parseRangoliMenu,
-    distance: 6,
-    transport: "walk",
+    distance: 7,
+    transport: "car",
     area: "Kunratice",
   },
   lokal: {
