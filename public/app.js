@@ -25,9 +25,26 @@ function buildMenuHtml(menuData, restaurantId) {
 
   if (menuData.items && menuData.items.length > 0) {
     html += '<ul class="menu-list">';
+    let mainSectionStarted = false;
     menuData.items.forEach((item) => {
-      html += '<li class="menu-item"><div class="menu-item-info">';
-      html += `<span class="menu-item-name">${item.name || "Unnamed Item"}</span>`;
+      const rawName = item.name || "Unnamed Item";
+      const isSoup = /^Pol[eé]vka\s*:/i.test(rawName);
+      const displayName = isSoup ? rawName.replace(/^Pol[eé]vka\s*:\s*/i, "") : rawName;
+
+      if (!isSoup && !mainSectionStarted) {
+        mainSectionStarted = true;
+        html += '<li class="menu-list-section-label" aria-hidden="true">Hlavni jidla</li>';
+      }
+
+      const itemClass = isSoup ? "menu-item menu-item--soup" : "menu-item menu-item--main";
+      html += `<li class="${itemClass}"><div class="menu-item-info">`;
+
+      if (isSoup) {
+        html += '<span class="menu-item-type-label">Polevka</span>';
+      }
+
+      html += `<span class="menu-item-name">${displayName}</span>`;
+
       if (item.description) {
         const cleaned = item.description.replace(/\s\s+/g, " ").trim();
         if (cleaned) {

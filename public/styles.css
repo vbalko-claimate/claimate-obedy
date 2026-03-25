@@ -18,7 +18,13 @@
   --menu-item-hover-bg: #f7fafb;
   --menu-item-name-text: #343a40;
   --menu-item-price-text: #007991;
+  --menu-item-price-border: rgba(0, 121, 145, 0.35);
+  --menu-item-price-bg: rgba(0, 121, 145, 0.06);
   --menu-item-desc-text: #6b7280;
+  --menu-item-soup-bg: #f5fbfc;
+  --menu-item-soup-accent: #78ffd6;
+  --menu-item-type-label-text: #007991;
+  --menu-section-label-text: #9ca3af;
   --heading-color: var(--tab-active-text);
   --link-color: var(--tab-active-text);
   --link-border: var(--tab-active-text);
@@ -73,7 +79,13 @@ body.dark-theme {
   --menu-item-hover-bg: #353945;
   --menu-item-name-text: #e1e3e9;
   --menu-item-price-text: #78ffd6;
+  --menu-item-price-border: rgba(120, 255, 214, 0.3);
+  --menu-item-price-bg: rgba(120, 255, 214, 0.07);
   --menu-item-desc-text: #8891a5;
+  --menu-item-soup-bg: #2a2e3d;
+  --menu-item-soup-accent: #1d9a8a;
+  --menu-item-type-label-text: #1d9a8a;
+  --menu-section-label-text: #52586f;
   --heading-color: var(--tab-active-text);
   --link-color: var(--tab-active-text);
   --link-border: var(--tab-active-text);
@@ -290,37 +302,112 @@ input:checked + .slider:before { transform: translateX(20px); }
   list-style: none;
   padding-left: 0;
 }
+
+/* Section divider label ("Hlavni jidla") */
+.menu-list-section-label {
+  font-size: 0.7em;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--menu-section-label-text);
+  padding: 14px 4px 5px;
+  border-bottom: 1px solid var(--menu-item-border);
+}
+
+/* Base item row */
 .menu-item {
   border-bottom: 1px solid var(--menu-item-border);
-  padding: 10px 4px;
+  padding: 10px 8px;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 12px;
+  gap: 14px;
+  transition: background-color 0.15s;
 }
 .menu-item:last-child { border-bottom: none; }
+.menu-item:hover { background-color: var(--menu-item-hover-bg); }
+
+/* Soup row — lighter weight, distinct background, left accent */
+.menu-item--soup {
+  padding: 8px 8px 8px 12px;
+  border-left: 3px solid var(--menu-item-soup-accent);
+  background-color: var(--menu-item-soup-bg);
+  border-radius: 0 4px 4px 0;
+  margin-bottom: 2px;
+}
+.menu-item--soup:hover { background-color: var(--menu-item-soup-bg); }
+
+/* Main course row — full visual weight */
+.menu-item--main {
+  padding: 12px 8px;
+}
+
 .menu-item-info {
   flex: 1;
   min-width: 0;
 }
+
+/* Small "Polevka" type label above soup name */
+.menu-item-type-label {
+  display: block;
+  font-size: 0.68em;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--menu-item-type-label-text);
+  margin-bottom: 1px;
+}
+
+/* Item name */
+.menu-item--soup .menu-item-name {
+  font-size: 0.875em;
+  font-weight: 400;
+  color: var(--menu-item-desc-text);
+}
+.menu-item--main .menu-item-name {
+  font-size: 1em;
+  font-weight: 600;
+  color: var(--menu-item-name-text);
+  line-height: 1.35;
+}
+
+/* Fallback for items with no modifier class */
 .menu-item-name {
   font-size: 0.95em;
   font-weight: 500;
   color: var(--menu-item-name-text);
 }
+
 .menu-item-desc {
   display: block;
-  margin-top: 3px;
+  margin-top: 4px;
   color: var(--menu-item-desc-text);
-  font-size: 0.8em;
+  font-size: 0.78em;
   font-style: italic;
+  line-height: 1.4;
 }
+
+/* Price badge */
 .price {
+  flex-shrink: 0;
+  align-self: flex-start;
   font-weight: 600;
   white-space: nowrap;
   color: var(--menu-item-price-text);
-  font-size: 0.95em;
-  padding-top: 1px;
+  font-size: 0.82em;
+  line-height: 1;
+  padding: 3px 7px;
+  border: 1px solid var(--menu-item-price-border);
+  background-color: var(--menu-item-price-bg);
+  border-radius: 10px;
+  margin-top: 2px;
+  letter-spacing: 0.01em;
+}
+
+/* In soup rows the price badge sits smaller */
+.menu-item--soup .price {
+  font-size: 0.75em;
+  padding: 2px 6px;
 }
 
 /* Loading & Error */
