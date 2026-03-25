@@ -1,4 +1,5 @@
 const API_BASE_URL = "/api/menu";
+const RESTAURANT_IDS = ["volha", "zatisi", "spojovna", "rangoli"];
 
 const loadedMenus = {};
 
@@ -16,88 +17,106 @@ const restaurantNames = {
   rangoli: "Rangoli Kunratice",
 };
 
-function displayMenu(contentDiv, menuData, restaurantId) {
+// --- Menu Display ---
+
+function buildMenuHtml(menuData, restaurantId) {
   const name = menuData.restaurantName || restaurantNames[restaurantId] || restaurantId;
-  contentDiv.innerHTML = `<h2>${name}</h2>`;
+  let html = `<h2>${name}</h2>`;
 
   if (menuData.items && menuData.items.length > 0) {
-    let menuHtml = '<ul class="menu-list">';
+    html += '<ul class="menu-list">';
     menuData.items.forEach((item) => {
-      menuHtml += '<li class="menu-item">';
-      menuHtml += `<strong>${item.name || "Unnamed Item"}</strong>`;
-      if (item.price && item.price !== "N/A") {
-        menuHtml += ` <span class="price">(${item.price})</span>`;
-      }
+      html += '<li class="menu-item"><div class="menu-item-info">';
+      html += `<span class="menu-item-name">${item.name || "Unnamed Item"}</span>`;
       if (item.description) {
         const cleaned = item.description.replace(/\s\s+/g, " ").trim();
         if (cleaned) {
-          menuHtml += `<br><em class="description">${cleaned}</em>`;
+          html += `<span class="menu-item-desc">${cleaned}</span>`;
         }
       }
-      menuHtml += "</li>";
+      html += "</div>";
+      if (item.price && item.price !== "N/A") {
+        html += `<span class="price">${item.price}</span>`;
+      }
+      html += "</li>";
     });
-    menuHtml += "</ul>";
-    contentDiv.innerHTML += menuHtml;
+    html += "</ul>";
   } else {
-    contentDiv.innerHTML += "<p>Menu not available or empty today.</p>";
+    html += "<p>Menu not available or empty today.</p>";
   }
 
-  if (loadedMenus[restaurantId] && loadedMenus[restaurantId].date) {
-    const updateDate = new Date(loadedMenus[restaurantId].date);
-    const formattedDate = updateDate.toLocaleDateString(undefined, {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-    });
-    contentDiv.innerHTML += `<p class="last-updated">Last updated: ${formattedDate}</p>`;
+  if (loadedMenus[restaurantId]) {
+    const now = new Date();
+    const time = now.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+    html += `<p class="last-updated">Loaded today at ${time}</p>`;
   }
 
   if (menuData.sourceUrl) {
-    contentDiv.innerHTML += `<a href="${menuData.sourceUrl}" target="_blank" rel="noopener noreferrer" class="source-link">View Original Source</a>`;
+    html += `<a href="${menuData.sourceUrl}" target="_blank" rel="noopener noreferrer" class="source-link">View Original</a>`;
   }
+
+  return html;
 }
 
-function displayError(contentDiv, restaurantId, errorMessage) {
+function humanizeError(rawError) {
+  if (/timeout|ETIMEDOUT/i.test(rawError)) return "The restaurant's website is not responding. Try again in a few minutes.";
+  if (/503|502|504/i.test(rawError)) return "The restaurant's menu is temporarily unavailable.";
+  if (/network|ENOTFOUND|fetch/i.test(rawError)) return "Could not reach the server. Check your connection.";
+  if (/Could not find/i.test(rawError)) return "Menu could not be found on the restaurant's website today.";
+  return "Menu unavailable right now. Try again later.";
+}
+
+function buildErrorHtml(restaurantId, errorMessage) {
   const name = restaurantNames[restaurantId] || restaurantId;
   const sourceUrl = restaurantSourceUrls[restaurantId];
 
-  contentDiv.innerHTML = `<h2>${name}</h2>`;
-  contentDiv.innerHTML += `
-    <div class="error-message">
-      Menu dnes nedostupne / Menu unavailable today.<br>
-      <small>${errorMessage}</small>
-    </div>`;
+  let html = `<h2>${name}</h2>`;
+  html += `<div class="error-message">`;
+  html += humanizeError(errorMessage);
+  html += `<br><button class="retry-btn" onclick="retryLoad('${restaurantId}')">Try again</button>`;
+  html += `</div>`;
 
   if (sourceUrl) {
-    contentDiv.innerHTML += `<a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" class="source-link">Zobrazit menu na webu restaurace</a>`;
+    html += `<a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" class="source-link">View restaurant website</a>`;
   }
+
+  return html;
+}
+
+function getContentDivs(restaurantId) {
+  const divs = [];
+  const tabDiv = document.getElementById(restaurantId);
+  if (tabDiv) divs.push(tabDiv);
+  const cardDiv = document.getElementById(`card-${restaurantId}`);
+  if (cardDiv) divs.push(cardDiv);
+  return divs;
 }
 
 async function loadMenu(restaurantId) {
-  const contentDiv = document.getElementById(restaurantId);
-  if (!contentDiv) return;
+  const divs = getContentDivs(restaurantId);
+  if (divs.length === 0) return;
 
   const todayString = new Date().toDateString();
 
   if (loadedMenus[restaurantId] && loadedMenus[restaurantId].date === todayString) {
-    displayMenu(contentDiv, loadedMenus[restaurantId].data, restaurantId);
+    const html = buildMenuHtml(loadedMenus[restaurantId].data, restaurantId);
+    divs.forEach((d) => (d.innerHTML = html));
     return;
   }
 
-  contentDiv.innerHTML =
-    '<div class="loading"><div class="loader-spinner"></div><div>Loading Menu...</div></div>';
+  divs.forEach((d) => {
+    d.innerHTML = '<div class="loading" role="status"><div class="loader-spinner"></div><div>Loading...</div></div>';
+  });
 
   try {
     const response = await fetch(`${API_BASE_URL}/${restaurantId}`);
 
     if (!response.ok) {
-      let errorText = `Error fetching menu: ${response.status} ${response.statusText}`;
+      let errorText = `${response.status} ${response.statusText}`;
       try {
         const errorData = await response.json();
         errorText = errorData.error || errorText;
-      } catch (e) {
-        /* response not JSON */
-      }
+      } catch (e) { /* not JSON */ }
       throw new Error(errorText);
     }
 
@@ -108,83 +127,174 @@ async function loadMenu(restaurantId) {
     }
 
     loadedMenus[restaurantId] = { date: todayString, data: menuData };
-    displayMenu(contentDiv, menuData, restaurantId);
+    const html = buildMenuHtml(menuData, restaurantId);
+    divs.forEach((d) => (d.innerHTML = html));
   } catch (error) {
-    displayError(contentDiv, restaurantId, error.message);
+    const html = buildErrorHtml(restaurantId, error.message);
+    divs.forEach((d) => (d.innerHTML = html));
   }
 }
 
-function openTab(evt, tabName) {
-  const tabcontent = document.getElementsByClassName("tab-content");
-  for (let i = 0; i < tabcontent.length; i++) {
-    tabcontent[i].style.display = "none";
+function retryLoad(restaurantId) {
+  delete loadedMenus[restaurantId];
+  loadMenu(restaurantId);
+}
+
+function loadAllMenus() {
+  RESTAURANT_IDS.forEach((id) => loadMenu(id));
+}
+
+// --- View Toggle (Tabs / Cards) ---
+
+let currentView = localStorage.getItem("viewMode") || "cards";
+
+function setView(mode) {
+  currentView = mode;
+  localStorage.setItem("viewMode", mode);
+
+  const tabView = document.getElementById("tab-view");
+  const cardView = document.getElementById("card-view");
+  const toggleBtn = document.getElementById("view-toggle");
+
+  if (mode === "tabs") {
+    tabView.style.display = "";
+    cardView.className = "cards-container";
+    toggleBtn.textContent = "Cards";
+  } else {
+    tabView.style.display = "none";
+    cardView.className = "cards-container active";
+    toggleBtn.textContent = "Tabs";
   }
-  const tablinks = document.getElementsByClassName("tab-button");
-  for (let i = 0; i < tablinks.length; i++) {
-    tablinks[i].className = tablinks[i].className.replace(" active", "");
+}
+
+function toggleView() {
+  setView(currentView === "tabs" ? "cards" : "tabs");
+}
+
+// --- Tab Navigation ---
+
+function openTab(tabName) {
+  const tabs = document.querySelectorAll(".tab-content");
+  tabs.forEach((t) => t.classList.remove("active"));
+
+  const buttons = document.querySelectorAll(".tab-button");
+  buttons.forEach((b) => {
+    b.classList.remove("active");
+    b.setAttribute("aria-selected", "false");
+  });
+
+  const target = document.getElementById(tabName);
+  if (target) target.classList.add("active");
+
+  const activeBtn = document.querySelector(`.tab-button[data-tab="${tabName}"]`);
+  if (activeBtn) {
+    activeBtn.classList.add("active");
+    activeBtn.setAttribute("aria-selected", "true");
   }
-  document.getElementById(tabName).style.display = "block";
-  evt.currentTarget.className += " active";
+
   loadMenu(tabName);
 }
 
-// Theme
+function handleTabKeyboard(e) {
+  const buttons = Array.from(document.querySelectorAll(".tab-button"));
+  const currentIndex = buttons.indexOf(e.target);
+  let newIndex;
+
+  if (e.key === "ArrowRight") {
+    newIndex = (currentIndex + 1) % buttons.length;
+  } else if (e.key === "ArrowLeft") {
+    newIndex = (currentIndex - 1 + buttons.length) % buttons.length;
+  } else {
+    return;
+  }
+
+  e.preventDefault();
+  buttons[newIndex].focus();
+  openTab(buttons[newIndex].dataset.tab);
+}
+
+// --- Theme ---
+
 const themeToggle = document.getElementById("theme-toggle");
-const currentTheme = localStorage.getItem("theme");
+const themeLabel = document.getElementById("theme-label");
 
 function setTheme(theme) {
   if (theme === "dark") {
     document.body.classList.add("dark-theme");
     themeToggle.checked = true;
+    themeLabel.textContent = "Light";
     localStorage.setItem("theme", "dark");
   } else {
     document.body.classList.remove("dark-theme");
     themeToggle.checked = false;
+    themeLabel.textContent = "Dark";
     localStorage.setItem("theme", "light");
   }
 }
 
-if (currentTheme) {
-  setTheme(currentTheme);
-} else {
-  setTheme("dark");
+function initTheme() {
+  const saved = localStorage.getItem("theme");
+  if (saved) {
+    setTheme(saved);
+  } else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) {
+    setTheme("dark");
+  } else {
+    setTheme("light");
+  }
 }
 
 themeToggle.addEventListener("change", () => {
   setTheme(themeToggle.checked ? "dark" : "light");
 });
 
-// App Info
-async function loadAppInfo() {
-  try {
-    const response = await fetch("/api/app-info");
-    if (!response.ok) throw new Error("Failed to fetch app info");
-    const appInfo = await response.json();
+// --- Header Date ---
 
-    const appInfoElement = document.querySelector(".app-info");
-    if (appInfoElement) {
-      appInfoElement.innerHTML = `
-        Version ${appInfo.version} |
-        <span title="Last commit on ${appInfo.lastCommit.date}">
-          Commit <a href="${appInfo.lastCommit.url}" target="_blank" rel="noopener noreferrer">
-          ${appInfo.lastCommit.hash}
-          </a>
-        </span>
-      `;
-    }
-  } catch (error) {
-    console.error("Error loading app info:", error);
+function setHeaderDate() {
+  const el = document.getElementById("header-date");
+  if (el) {
+    const now = new Date();
+    el.textContent = now.toLocaleDateString("en-US", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
   }
 }
 
-// Init
-document.addEventListener("DOMContentLoaded", () => {
-  const firstActiveButton = document.querySelector(".tab-button.active");
-  if (firstActiveButton) {
-    const initialTabName = firstActiveButton.getAttribute("data-tab");
-    if (initialTabName) {
-      loadMenu(initialTabName);
+// --- App Info ---
+
+async function loadAppInfo() {
+  try {
+    const response = await fetch("/api/app-info");
+    if (!response.ok) return;
+    const appInfo = await response.json();
+
+    const el = document.querySelector(".app-info");
+    if (el) {
+      el.innerHTML = `v${appInfo.version} | <a href="${appInfo.lastCommit.url}" target="_blank" rel="noopener noreferrer" title="Last commit: ${appInfo.lastCommit.date}">${appInfo.lastCommit.hash}</a>`;
     }
-  }
+  } catch (e) { /* silent */ }
+}
+
+// --- Init ---
+
+document.addEventListener("DOMContentLoaded", () => {
+  setHeaderDate();
+  initTheme();
+  setView(currentView);
+
+  // Bind tab clicks + keyboard
+  document.querySelectorAll(".tab-button").forEach((btn) => {
+    btn.addEventListener("click", () => openTab(btn.dataset.tab));
+    btn.addEventListener("keydown", handleTabKeyboard);
+  });
+
+  // Bind view toggle
+  document.getElementById("view-toggle").addEventListener("click", toggleView);
+
+  // Load all menus (both views share data via loadedMenus cache)
+  loadAllMenus();
+
   loadAppInfo();
 });

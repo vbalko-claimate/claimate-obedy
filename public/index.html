@@ -6,14 +6,14 @@
     <title>Prague Lunch Menus: Volha, Zatisi, Spojovna & Rangoli</title>
     <meta
       name="description"
-      content="View the daily lunch menus for Prague restaurants Menza Volha, Cafe Zatisi, Pivovar Spojovna and Rangoli Kunratice. Updated frequently."
+      content="View the daily lunch menus for Prague restaurants Menza Volha, Cafe Zatisi, Pivovar Spojovna and Rangoli Kunratice."
     />
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
         "@type": "WebPage",
         "name": "Daily Menus | Volha, Zatisi, Spojovna, Rangoli (Prague)",
-        "description": "View the daily lunch menus for Prague restaurants Menza Volha, Cafe Zatisi, Pivovar Spojovna and Rangoli Kunratice.",
+        "description": "View the daily lunch menus for Prague restaurants.",
         "publisher": {
           "@type": "Organization",
           "name": "CLAIMATE Tech",
@@ -26,44 +26,61 @@
   <body>
     <div class="container">
       <header>
-        <h1>Today's Lunch Menus - Prague++</h1>
+        <h1>Today's Lunch Menus</h1>
+        <div class="header-date" id="header-date"></div>
       </header>
 
-      <div class="theme-switch-wrapper">
-        <label class="theme-switch" for="theme-toggle">
-          <input type="checkbox" id="theme-toggle" />
-          <span class="slider round"></span>
-        </label>
-        <span class="theme-label">Dark Mode</span>
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <button class="view-toggle-btn" id="view-toggle" aria-label="Switch between tab and card view">Tabs</button>
+        </div>
+        <div class="toolbar-right">
+          <div class="theme-switch-wrapper">
+            <label class="theme-switch" for="theme-toggle" aria-label="Toggle dark mode">
+              <input type="checkbox" id="theme-toggle" aria-label="Toggle dark mode" />
+              <span class="slider round"></span>
+            </label>
+            <span class="theme-label" id="theme-label">Dark</span>
+          </div>
+        </div>
       </div>
 
-      <div class="tab-container">
-        <div class="tab-buttons">
-          <button class="tab-button active" data-tab="volha" onclick="openTab(event, 'volha')">
-            Menza Volha
-          </button>
-          <button class="tab-button" data-tab="zatisi" onclick="openTab(event, 'zatisi')">
-            Cafe Zatisi
-          </button>
-          <button class="tab-button" data-tab="spojovna" onclick="openTab(event, 'spojovna')">
-            Pivovar Spojovna
-          </button>
-          <button class="tab-button" data-tab="rangoli" onclick="openTab(event, 'rangoli')">
-            Rangoli Kunratice
-          </button>
+      <!-- Tab View -->
+      <div class="tab-container" id="tab-view">
+        <div class="tab-buttons" role="tablist">
+          <button class="tab-button active" data-tab="volha" role="tab" aria-selected="true" aria-controls="volha">Volha</button>
+          <button class="tab-button" data-tab="zatisi" role="tab" aria-selected="false" aria-controls="zatisi">Zatisi</button>
+          <button class="tab-button" data-tab="spojovna" role="tab" aria-selected="false" aria-controls="spojovna">Spojovna</button>
+          <button class="tab-button" data-tab="rangoli" role="tab" aria-selected="false" aria-controls="rangoli">Rangoli</button>
         </div>
 
-        <div id="volha" class="tab-content active">
-          <div class="loading"><div class="loader-spinner"></div><div>Loading Menza Volha...</div></div>
+        <div id="volha" class="tab-content menu-panel active" role="tabpanel">
+          <div class="loading" role="status"><div class="loader-spinner"></div><div>Loading...</div></div>
         </div>
-        <div id="zatisi" class="tab-content">
-          <div class="loading"><div class="loader-spinner"></div><div>Loading Cafe Zatisi...</div></div>
+        <div id="zatisi" class="tab-content menu-panel" role="tabpanel">
+          <div class="loading" role="status"><div class="loader-spinner"></div><div>Loading...</div></div>
         </div>
-        <div id="spojovna" class="tab-content">
-          <div class="loading"><div class="loader-spinner"></div><div>Loading Pivovar Spojovna...</div></div>
+        <div id="spojovna" class="tab-content menu-panel" role="tabpanel">
+          <div class="loading" role="status"><div class="loader-spinner"></div><div>Loading...</div></div>
         </div>
-        <div id="rangoli" class="tab-content">
-          <div class="loading"><div class="loader-spinner"></div><div>Loading Rangoli Kunratice...</div></div>
+        <div id="rangoli" class="tab-content menu-panel" role="tabpanel">
+          <div class="loading" role="status"><div class="loader-spinner"></div><div>Loading...</div></div>
+        </div>
+      </div>
+
+      <!-- Card View -->
+      <div class="cards-container" id="card-view">
+        <div id="card-volha" class="restaurant-card menu-panel">
+          <div class="loading" role="status"><div class="loader-spinner"></div><div>Loading...</div></div>
+        </div>
+        <div id="card-zatisi" class="restaurant-card menu-panel">
+          <div class="loading" role="status"><div class="loader-spinner"></div><div>Loading...</div></div>
+        </div>
+        <div id="card-spojovna" class="restaurant-card menu-panel">
+          <div class="loading" role="status"><div class="loader-spinner"></div><div>Loading...</div></div>
+        </div>
+        <div id="card-rangoli" class="restaurant-card menu-panel">
+          <div class="loading" role="status"><div class="loader-spinner"></div><div>Loading...</div></div>
         </div>
       </div>
     </div>
