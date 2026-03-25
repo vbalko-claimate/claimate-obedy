@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prague Lunch Menus: Volha, Zatisi, Spojovna & Rangoli</title>
+    <meta
+      name="description"
+      content="View the daily lunch menus for Prague restaurants Menza Volha, Cafe Zatisi, Pivovar Spojovna and Rangoli Kunratice. Updated frequently."
+    />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebPage",
+        "name": "Daily Menus | Volha, Zatisi, Spojovna, Rangoli (Prague)",
+        "description": "View the daily lunch menus for Prague restaurants Menza Volha, Cafe Zatisi, Pivovar Spojovna and Rangoli Kunratice.",
+        "publisher": {
+          "@type": "Organization",
+          "name": "CLAIMATE Tech",
+          "url": "https://claimate.tech"
+        }
+      }
+    </script>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Today's Lunch Menus - Prague++</h1>
+      </header>
+
+      <div class="theme-switch-wrapper">
+        <label class="theme-switch" for="theme-toggle">
+          <input type="checkbox" id="theme-toggle" />
+          <span class="slider round"></span>
+        </label>
+        <span class="theme-label">Dark Mode</span>
+      </div>
+
+      <div class="tab-container">
+        <div class="tab-buttons">
+          <button class="tab-button active" data-tab="volha" onclick="openTab(event, 'volha')">
+            Menza Volha
+          </button>
+          <button class="tab-button" data-tab="zatisi" onclick="openTab(event, 'zatisi')">
+            Cafe Zatisi
+          </button>
+          <button class="tab-button" data-tab="spojovna" onclick="openTab(event, 'spojovna')">
+            Pivovar Spojovna
+          </button>
+          <button class="tab-button" data-tab="rangoli" onclick="openTab(event, 'rangoli')">
+            Rangoli Kunratice
+          </button>
+        </div>
+
+        <div id="volha" class="tab-content active">
+          <div class="loading"><div class="loader-spinner"></div><div>Loading Menza Volha...</div></div>
+        </div>
+        <div id="zatisi" class="tab-content">
+          <div class="loading"><div class="loader-spinner"></div><div>Loading Cafe Zatisi...</div></div>
+        </div>
+        <div id="spojovna" class="tab-content">
+          <div class="loading"><div class="loader-spinner"></div><div>Loading Pivovar Spojovna...</div></div>
+        </div>
+        <div id="rangoli" class="tab-content">
+          <div class="loading"><div class="loader-spinner"></div><div>Loading Rangoli Kunratice...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <p>
+        Menu data provided by
+        <a href="https://claimate.tech" target="_blank" rel="noopener noreferrer">CLAIMATE Tech</a>
+      </p>
+      <p class="app-info"></p>
+    </footer>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
