@@ -1,27 +1,67 @@
 const API_BASE_URL = "/api/menu";
-const RESTAURANT_IDS = ["volha", "zatisi", "spojovna", "rangoli"];
 
 const loadedMenus = {};
+let restaurants = [];
+let currentFilter = localStorage.getItem("filter") || "all";
 
-const restaurantSourceUrls = {
-  volha: "https://menzavolha.cz/jidelni-listek/",
-  zatisi: "https://restaurantcafe.cz/restaurant-cafe-zatisi/specialni-menu-2/",
-  spojovna: "https://pivovarspojovna.cz/menu/",
-  rangoli: "https://www.rangolikunratice.cz/cs/#daily-menu",
-};
+// --- Fetch restaurant list from API ---
 
-const restaurantNames = {
-  volha: "Menza Volha",
-  zatisi: "Cafe Zatisi",
-  spojovna: "Pivovar Spojovna",
-  rangoli: "Rangoli Kunratice",
-};
+async function loadRestaurants() {
+  try {
+    const response = await fetch("/api/restaurants");
+    restaurants = await response.json();
+    renderGrid();
+    loadAllMenus();
+  } catch (e) {
+    document.getElementById("restaurants-grid").innerHTML =
+      '<div class="error-message">Failed to load restaurant list.</div>';
+  }
+}
+
+// --- Render ---
+
+function renderGrid() {
+  const grid = document.getElementById("restaurants-grid");
+  const filtered = restaurants.filter((r) => {
+    if (currentFilter === "all") return true;
+    return r.transport === currentFilter;
+  });
+
+  if (filtered.length === 0) {
+    grid.innerHTML = '<p style="padding:30px;text-align:center;">No restaurants match this filter.</p>';
+    return;
+  }
+
+  // Sort: walk first, then by distance
+  filtered.sort((a, b) => {
+    if (a.transport !== b.transport) return a.transport === "walk" ? -1 : 1;
+    return a.distance - b.distance;
+  });
+
+  grid.innerHTML = filtered
+    .map((r) => {
+      const transportIcon = r.transport === "walk" ? "&#128694;" : "&#128663;";
+      return `
+        <div class="restaurant-card menu-panel" id="card-${r.id}" data-transport="${r.transport}">
+          <div class="card-header">
+            <h2>${r.name}</h2>
+            <span class="distance-badge ${r.transport}" title="${r.distance} min ${r.transport === 'walk' ? 'walking' : 'by car'}">
+              ${transportIcon} ${r.distance} min
+            </span>
+          </div>
+          <div class="card-area">${r.area}</div>
+          <div class="card-body" id="menu-${r.id}">
+            <div class="loading" role="status"><div class="loader-spinner"></div><div>Loading...</div></div>
+          </div>
+        </div>`;
+    })
+    .join("");
+}
 
 // --- Menu Display ---
 
 function buildMenuHtml(menuData, restaurantId) {
-  const name = menuData.restaurantName || restaurantNames[restaurantId] || restaurantId;
-  let html = `<h2>${name}</h2>`;
+  let html = "";
 
   if (menuData.items && menuData.items.length > 0) {
     html += '<ul class="menu-list">';
@@ -29,21 +69,20 @@ function buildMenuHtml(menuData, restaurantId) {
     menuData.items.forEach((item) => {
       const rawName = item.name || "Unnamed Item";
       const hasSoupKeyword = /^Pol[eé]vka[\s:]/i.test(rawName);
-      // Spojovna: soup is first item, starts with volume like "0,3l"
       const looksLikeSoup = !mainSectionStarted && /^0,[0-9]+l\s/i.test(rawName);
       const isSoup = hasSoupKeyword || looksLikeSoup;
       const displayName = hasSoupKeyword ? rawName.replace(/^Pol[eé]vka\s*:?\s*/i, "") : rawName;
 
       if (!isSoup && !mainSectionStarted) {
         mainSectionStarted = true;
-        html += '<li class="menu-list-section-label" aria-hidden="true">Hlavni jidla</li>';
+        html += '<li class="menu-list-section-label" aria-hidden="true">Main courses</li>';
       }
 
       const itemClass = isSoup ? "menu-item menu-item--soup" : "menu-item menu-item--main";
       html += `<li class="${itemClass}"><div class="menu-item-info">`;
 
       if (isSoup) {
-        html += '<span class="menu-item-type-label">Polevka</span>';
+        html += '<span class="menu-item-type-label">Soup</span>';
       }
 
       html += `<span class="menu-item-name">${displayName}</span>`;
@@ -62,96 +101,67 @@ function buildMenuHtml(menuData, restaurantId) {
     });
     html += "</ul>";
   } else {
-    html += "<p>Menu not available or empty today.</p>";
-  }
-
-  if (loadedMenus[restaurantId]) {
-    const now = new Date();
-    const time = now.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-    html += `<p class="last-updated">Loaded today at ${time}</p>`;
+    html += '<p class="empty-menu">No menu available today.</p>';
   }
 
   if (menuData.sourceUrl) {
-    html += `<a href="${menuData.sourceUrl}" target="_blank" rel="noopener noreferrer" class="source-link">View Original</a>`;
+    html += `<a href="${menuData.sourceUrl}" target="_blank" rel="noopener noreferrer" class="source-link">View original</a>`;
   }
 
   return html;
 }
 
 function humanizeError(rawError) {
-  if (/timeout|ETIMEDOUT/i.test(rawError)) return "The restaurant's website is not responding. Try again in a few minutes.";
-  if (/503|502|504/i.test(rawError)) return "The restaurant's menu is temporarily unavailable.";
-  if (/network|ENOTFOUND|fetch/i.test(rawError)) return "Could not reach the server. Check your connection.";
-  if (/Could not find/i.test(rawError)) return "Menu could not be found on the restaurant's website today.";
-  return "Menu unavailable right now. Try again later.";
+  if (/timeout|ETIMEDOUT/i.test(rawError)) return "Restaurant website not responding.";
+  if (/503|502|504/i.test(rawError)) return "Menu temporarily unavailable.";
+  if (/network|ENOTFOUND|fetch/i.test(rawError)) return "Could not reach the server.";
+  if (/Could not find/i.test(rawError)) return "Menu not found on restaurant website.";
+  return "Menu unavailable right now.";
 }
 
 function buildErrorHtml(restaurantId, errorMessage) {
-  const name = restaurantNames[restaurantId] || restaurantId;
-  const sourceUrl = restaurantSourceUrls[restaurantId];
+  const r = restaurants.find((r) => r.id === restaurantId);
+  const sourceUrl = r ? r.sourceUrl : "#";
 
-  let html = `<h2>${name}</h2>`;
-  html += `<div class="error-message">`;
-  html += humanizeError(errorMessage);
+  let html = `<div class="error-message">${humanizeError(errorMessage)}`;
   html += `<br><button class="retry-btn" onclick="retryLoad('${restaurantId}')">Try again</button>`;
   html += `</div>`;
-
-  if (sourceUrl) {
-    html += `<a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" class="source-link">View restaurant website</a>`;
-  }
-
+  html += `<a href="${sourceUrl}" target="_blank" rel="noopener noreferrer" class="source-link">Visit restaurant website</a>`;
   return html;
 }
 
-function getContentDivs(restaurantId) {
-  const divs = [];
-  const tabDiv = document.getElementById(restaurantId);
-  if (tabDiv) divs.push(tabDiv);
-  const cardDiv = document.getElementById(`card-${restaurantId}`);
-  if (cardDiv) divs.push(cardDiv);
-  return divs;
-}
+// --- Load menus ---
 
 async function loadMenu(restaurantId) {
-  const divs = getContentDivs(restaurantId);
-  if (divs.length === 0) return;
+  const menuDiv = document.getElementById(`menu-${restaurantId}`);
+  if (!menuDiv) return;
 
   const todayString = new Date().toDateString();
 
   if (loadedMenus[restaurantId] && loadedMenus[restaurantId].date === todayString) {
-    const html = buildMenuHtml(loadedMenus[restaurantId].data, restaurantId);
-    divs.forEach((d) => (d.innerHTML = html));
+    menuDiv.innerHTML = buildMenuHtml(loadedMenus[restaurantId].data, restaurantId);
     return;
   }
 
-  divs.forEach((d) => {
-    d.innerHTML = '<div class="loading" role="status"><div class="loader-spinner"></div><div>Loading...</div></div>';
-  });
+  menuDiv.innerHTML = '<div class="loading" role="status"><div class="loader-spinner"></div><div>Loading...</div></div>';
 
   try {
     const response = await fetch(`${API_BASE_URL}/${restaurantId}`);
-
     if (!response.ok) {
-      let errorText = `${response.status} ${response.statusText}`;
-      try {
-        const errorData = await response.json();
-        errorText = errorData.error || errorText;
-      } catch (e) { /* not JSON */ }
+      let errorText = `${response.status}`;
+      try { const d = await response.json(); errorText = d.error || errorText; } catch (e) {}
       throw new Error(errorText);
     }
 
     const menuData = await response.json();
-
     if (menuData.error && (!menuData.items || menuData.items.length === 0)) {
       throw new Error(menuData.error);
     }
 
     loadedMenus[restaurantId] = { date: todayString, data: menuData };
-    const html = buildMenuHtml(menuData, restaurantId);
-    divs.forEach((d) => (d.innerHTML = html));
+    menuDiv.innerHTML = buildMenuHtml(menuData, restaurantId);
   } catch (error) {
-    const html = buildErrorHtml(restaurantId, error.message);
-    divs.forEach((d) => (d.innerHTML = html));
+    menuDiv.innerHTML = buildErrorHtml(restaurantId, error.message);
   }
 }
 
@@ -161,73 +171,27 @@ function retryLoad(restaurantId) {
 }
 
 function loadAllMenus() {
-  RESTAURANT_IDS.forEach((id) => loadMenu(id));
+  restaurants.forEach((r) => loadMenu(r.id));
 }
 
-// --- View Toggle (Tabs / Cards) ---
+// --- Filters ---
 
-let currentView = localStorage.getItem("viewMode") || "cards";
+function setFilter(filter) {
+  currentFilter = filter;
+  localStorage.setItem("filter", filter);
 
-function setView(mode) {
-  currentView = mode;
-  localStorage.setItem("viewMode", mode);
-
-  const tabView = document.getElementById("tab-view");
-  const cardView = document.getElementById("card-view");
-
-  if (mode === "tabs") {
-    tabView.style.display = "";
-    cardView.className = "cards-container";
-  } else {
-    tabView.style.display = "none";
-    cardView.className = "cards-container active";
-  }
-
-  document.querySelectorAll(".view-btn").forEach((btn) => {
-    btn.classList.toggle("active", btn.dataset.view === mode);
-  });
-}
-
-// --- Tab Navigation ---
-
-function openTab(tabName) {
-  const tabs = document.querySelectorAll(".tab-content");
-  tabs.forEach((t) => t.classList.remove("active"));
-
-  const buttons = document.querySelectorAll(".tab-button");
-  buttons.forEach((b) => {
-    b.classList.remove("active");
-    b.setAttribute("aria-selected", "false");
+  document.querySelectorAll(".filter-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.filter === filter);
   });
 
-  const target = document.getElementById(tabName);
-  if (target) target.classList.add("active");
-
-  const activeBtn = document.querySelector(`.tab-button[data-tab="${tabName}"]`);
-  if (activeBtn) {
-    activeBtn.classList.add("active");
-    activeBtn.setAttribute("aria-selected", "true");
-  }
-
-  loadMenu(tabName);
-}
-
-function handleTabKeyboard(e) {
-  const buttons = Array.from(document.querySelectorAll(".tab-button"));
-  const currentIndex = buttons.indexOf(e.target);
-  let newIndex;
-
-  if (e.key === "ArrowRight") {
-    newIndex = (currentIndex + 1) % buttons.length;
-  } else if (e.key === "ArrowLeft") {
-    newIndex = (currentIndex - 1 + buttons.length) % buttons.length;
-  } else {
-    return;
-  }
-
-  e.preventDefault();
-  buttons[newIndex].focus();
-  openTab(buttons[newIndex].dataset.tab);
+  renderGrid();
+  // Re-render menus from cache (no re-fetch)
+  restaurants.forEach((r) => {
+    const menuDiv = document.getElementById(`menu-${r.id}`);
+    if (menuDiv && loadedMenus[r.id]) {
+      menuDiv.innerHTML = buildMenuHtml(loadedMenus[r.id].data, r.id);
+    }
+  });
 }
 
 // --- Theme ---
@@ -269,8 +233,7 @@ themeToggle.addEventListener("change", () => {
 function setHeaderDate() {
   const el = document.getElementById("header-date");
   if (el) {
-    const now = new Date();
-    el.textContent = now.toLocaleDateString("en-US", {
+    el.textContent = new Date().toLocaleDateString("en-US", {
       weekday: "long",
       day: "numeric",
       month: "long",
@@ -286,12 +249,11 @@ async function loadAppInfo() {
     const response = await fetch("/api/app-info");
     if (!response.ok) return;
     const appInfo = await response.json();
-
     const el = document.querySelector(".app-info");
     if (el) {
-      el.innerHTML = `v${appInfo.version} | <a href="${appInfo.lastCommit.url}" target="_blank" rel="noopener noreferrer" title="Last commit: ${appInfo.lastCommit.date}">${appInfo.lastCommit.hash}</a>`;
+      el.innerHTML = `v${appInfo.version} | <a href="${appInfo.lastCommit.url}" target="_blank" rel="noopener noreferrer">${appInfo.lastCommit.hash}</a>`;
     }
-  } catch (e) { /* silent */ }
+  } catch (e) {}
 }
 
 // --- Init ---
@@ -299,21 +261,16 @@ async function loadAppInfo() {
 document.addEventListener("DOMContentLoaded", () => {
   setHeaderDate();
   initTheme();
-  setView(currentView);
 
-  // Bind tab clicks + keyboard
-  document.querySelectorAll(".tab-button").forEach((btn) => {
-    btn.addEventListener("click", () => openTab(btn.dataset.tab));
-    btn.addEventListener("keydown", handleTabKeyboard);
+  // Bind filters
+  document.querySelectorAll(".filter-btn").forEach((btn) => {
+    btn.addEventListener("click", () => setFilter(btn.dataset.filter));
+  });
+  // Set initial active filter
+  document.querySelectorAll(".filter-btn").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.filter === currentFilter);
   });
 
-  // Bind view switcher
-  document.querySelectorAll(".view-btn").forEach((btn) => {
-    btn.addEventListener("click", () => setView(btn.dataset.view));
-  });
-
-  // Load all menus (both views share data via loadedMenus cache)
-  loadAllMenus();
-
+  loadRestaurants();
   loadAppInfo();
 });

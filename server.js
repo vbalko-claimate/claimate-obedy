@@ -7,6 +7,14 @@ const {
   parseVolhaMenu,
   parseZatisiMenu,
   parseRangoliMenu,
+  parseLokalMenu,
+  parseTakUrciteMenu,
+  parseKolkovnaMenu,
+  parseVeMlyneMenu,
+  parseDiCarloMenu,
+  parseXlRestaurantMenu,
+  parseChapadloMenu,
+  parseMichelskaMenu,
 } = require("./parsers");
 
 const app = express();
@@ -20,23 +28,87 @@ const restaurantConfig = {
     name: "Menza Volha",
     url: "https://menzavolha.cz/jidelni-listek/",
     parser: parseVolhaMenu,
+    distance: 2,
+    transport: "walk",
+    area: "Kunratice",
   },
   zatisi: {
-    name: "Café Zátisí",
+    name: "Cafe Zatisi",
     url: "https://restaurantcafe.cz/restaurant-cafe-zatisi/specialni-menu-2/",
     parser: parseZatisiMenu,
+    distance: 5,
+    transport: "walk",
+    area: "Kunratice",
   },
   spojovna: {
     name: "Pivovar Spojovna",
     url: "https://pivovarspojovna.cz/menu/",
     parser: parseSpojovnaMenu,
+    distance: 8,
+    transport: "walk",
+    area: "Kunratice",
   },
   rangoli: {
     name: "Rangoli Kunratice",
     url: "https://www.rangolikunratice.cz/cs/#daily-menu",
     parser: parseRangoliMenu,
+    distance: 6,
+    transport: "walk",
+    area: "Kunratice",
+  },
+  lokal: {
+    name: "Lokal U Zavadilu",
+    url: "https://lokal-uzavadilu.ambi.cz/cz/menu/?id=10231",
+    parser: parseLokalMenu,
+    distance: 2,
+    transport: "walk",
+    area: "Kunratice",
+  },
+  takurcite: {
+    name: "Tak Urcite",
+    url: "https://www.takurcite.com/poledni-menu",
+    parser: parseTakUrciteMenu,
+    distance: 5,
+    transport: "car",
+    area: "Katerinky",
+  },
+  dicarlo: {
+    name: "Di Carlo",
+    url: "https://dicarlo.cz/nase-menu/dnesni-nabidka/",
+    parser: parseDiCarloMenu,
+    distance: 5,
+    transport: "car",
+    area: "Seberov",
+  },
+  chapadlo: {
+    name: "Chapadlo",
+    url: "https://chapadlo.com/",
+    parser: parseChapadloMenu,
+    distance: 12,
+    transport: "car",
+    area: "Nusle",
+  },
+  michelska: {
+    name: "Michelska Pivnice",
+    url: "https://www.michelskapivnice.cz/",
+    parser: parseMichelskaMenu,
+    distance: 10,
+    transport: "car",
+    area: "Michle",
   },
 };
+
+app.get("/api/restaurants", (req, res) => {
+  const list = Object.entries(restaurantConfig).map(([id, config]) => ({
+    id,
+    name: config.name,
+    sourceUrl: config.url,
+    distance: config.distance,
+    transport: config.transport,
+    area: config.area,
+  }));
+  res.json(list);
+});
 
 app.get("/api/menu/:restaurant", async (req, res) => {
   const restaurantId = req.params.restaurant;
@@ -51,6 +123,9 @@ app.get("/api/menu/:restaurant", async (req, res) => {
   res.status(200).json({
     restaurantName: config.name,
     sourceUrl: config.url,
+    distance: config.distance,
+    transport: config.transport,
+    area: config.area,
     items: menuResult.items || [],
     error: menuResult.error || null,
   });
@@ -95,48 +170,23 @@ let lastCommitHash = "";
 let lastCommitDate = "";
 
 try {
-  // Get the short commit hash
   lastCommitHash = execSync("git rev-parse --short HEAD").toString().trim();
-
-  // Get the commit date formatted as YYYY-MM-DD
-  lastCommitDate = execSync("git log -1 --format=%cd --date=short")
-    .toString()
-    .trim();
-
-  // Count total number of commits for patch version
-  const commitCount = parseInt(
-    execSync("git rev-list --count HEAD").toString().trim(),
-    10
-  );
-
-  // Extract year and month from the commit date (for minor version)
+  lastCommitDate = execSync("git log -1 --format=%cd --date=short").toString().trim();
+  const commitCount = parseInt(execSync("git rev-list --count HEAD").toString().trim(), 10);
   const commitDateParts = lastCommitDate.split("-");
-  const yearLastTwo = commitDateParts[0].substring(2); // Last two digits of year
+  const yearLastTwo = commitDateParts[0].substring(2);
   const month = commitDateParts[1];
 
-  // Try to get the most recent tag for major version, defaulting to 0 if none exist
-  let majorVersion = 1; // Default major version
+  let majorVersion = 1;
   try {
-    // Try to get the most recent tag that looks like v1.2.3 or 1.2.3
-    const tagExec = execSync(
-      'git describe --tags --abbrev=0 2> /dev/null || echo "v0"'
-    )
-      .toString()
-      .trim();
-    // Extract the number after 'v' if it exists
+    const tagExec = execSync('git describe --tags --abbrev=0 2> /dev/null || echo "v0"').toString().trim();
     const tagMatch = tagExec.match(/^v?(\d+)/);
-    if (tagMatch && tagMatch[1]) {
-      majorVersion = parseInt(tagMatch[1], 10);
-    }
-  } catch (tagErr) {
-    // If no tags or error, keep default major version
-  }
+    if (tagMatch && tagMatch[1]) majorVersion = parseInt(tagMatch[1], 10);
+  } catch (tagErr) {}
 
-  // Format as MAJOR.YYMM.COMMITS-HASH
   dynamicVersion = `${majorVersion}.${yearLastTwo}${month}.${commitCount}-${lastCommitHash}`;
 } catch (err) {
   console.error("Failed to generate dynamic version:", err);
-  // Fallback to static version if git commands fail
   dynamicVersion = "1.0.0-unknown";
   lastCommitHash = "unknown";
   lastCommitDate = "unknown";

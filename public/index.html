@@ -3,39 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Prague Lunch Menus: Volha, Zatisi, Spojovna & Rangoli</title>
-    <meta
-      name="description"
-      content="View the daily lunch menus for Prague restaurants Menza Volha, Cafe Zatisi, Pivovar Spojovna and Rangoli Kunratice."
-    />
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "WebPage",
-        "name": "Daily Menus | Volha, Zatisi, Spojovna, Rangoli (Prague)",
-        "description": "View the daily lunch menus for Prague restaurants.",
-        "publisher": {
-          "@type": "Organization",
-          "name": "CLAIMATE Tech",
-          "url": "https://claimate.tech"
-        }
-      }
-    </script>
+    <title>Prague Lunch Menus — 12 restaurants near Kunratice</title>
+    <meta name="description" content="Daily lunch menus from 12+ Prague restaurants near Kunratice. Compare prices, filter by distance." />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <div class="container">
       <header>
-        <h1>Today's Lunch Menus</h1>
+        <h1>Lunch Menus</h1>
         <div class="header-date" id="header-date"></div>
-        <div class="view-switcher" id="view-switcher">
-          <button class="view-btn active" data-view="cards">All</button>
-          <button class="view-btn" data-view="tabs">By restaurant</button>
-        </div>
       </header>
 
       <div class="toolbar">
+        <div class="filters">
+          <button class="filter-btn active" data-filter="all">All</button>
+          <button class="filter-btn" data-filter="walk">Walking</button>
+          <button class="filter-btn" data-filter="car">Driving</button>
+        </div>
         <div class="toolbar-right">
           <div class="theme-switch-wrapper">
             <label class="theme-switch" for="theme-toggle" aria-label="Toggle dark mode">
@@ -47,51 +32,16 @@
         </div>
       </div>
 
-      <!-- Tab View -->
-      <div class="tab-container" id="tab-view">
-        <div class="tab-buttons" role="tablist">
-          <button class="tab-button active" data-tab="volha" role="tab" aria-selected="true" aria-controls="volha">Volha</button>
-          <button class="tab-button" data-tab="zatisi" role="tab" aria-selected="false" aria-controls="zatisi">Zatisi</button>
-          <button class="tab-button" data-tab="spojovna" role="tab" aria-selected="false" aria-controls="spojovna">Spojovna</button>
-          <button class="tab-button" data-tab="rangoli" role="tab" aria-selected="false" aria-controls="rangoli">Rangoli</button>
-        </div>
-
-        <div id="volha" class="tab-content menu-panel active" role="tabpanel">
-          <div class="loading" role="status"><div class="loader-spinner"></div><div>Loading...</div></div>
-        </div>
-        <div id="zatisi" class="tab-content menu-panel" role="tabpanel">
-          <div class="loading" role="status"><div class="loader-spinner"></div><div>Loading...</div></div>
-        </div>
-        <div id="spojovna" class="tab-content menu-panel" role="tabpanel">
-          <div class="loading" role="status"><div class="loader-spinner"></div><div>Loading...</div></div>
-        </div>
-        <div id="rangoli" class="tab-content menu-panel" role="tabpanel">
-          <div class="loading" role="status"><div class="loader-spinner"></div><div>Loading...</div></div>
-        </div>
-      </div>
-
-      <!-- Card View -->
-      <div class="cards-container" id="card-view">
-        <div id="card-volha" class="restaurant-card menu-panel">
-          <div class="loading" role="status"><div class="loader-spinner"></div><div>Loading...</div></div>
-        </div>
-        <div id="card-zatisi" class="restaurant-card menu-panel">
-          <div class="loading" role="status"><div class="loader-spinner"></div><div>Loading...</div></div>
-        </div>
-        <div id="card-spojovna" class="restaurant-card menu-panel">
-          <div class="loading" role="status"><div class="loader-spinner"></div><div>Loading...</div></div>
-        </div>
-        <div id="card-rangoli" class="restaurant-card menu-panel">
-          <div class="loading" role="status"><div class="loader-spinner"></div><div>Loading...</div></div>
+      <div class="cards-container" id="restaurants-grid">
+        <div class="loading" role="status">
+          <div class="loader-spinner"></div>
+          <div>Loading restaurants...</div>
         </div>
       </div>
     </div>
 
     <footer>
-      <p>
-        Menu data provided by
-        <a href="https://claimate.tech" target="_blank" rel="noopener noreferrer">CLAIMATE Tech</a>
-      </p>
+      <p>Menu data by <a href="https://claimate.tech" target="_blank" rel="noopener noreferrer">CLAIMATE Tech</a></p>
       <p class="app-info"></p>
     </footer>
 
