@@ -28,8 +28,11 @@ function buildMenuHtml(menuData, restaurantId) {
     let mainSectionStarted = false;
     menuData.items.forEach((item) => {
       const rawName = item.name || "Unnamed Item";
-      const isSoup = /^Pol[eé]vka[\s:]/i.test(rawName);
-      const displayName = isSoup ? rawName.replace(/^Pol[eé]vka\s*:?\s*/i, "") : rawName;
+      const hasSoupKeyword = /^Pol[eé]vka[\s:]/i.test(rawName);
+      // Spojovna: soup is first item, starts with volume like "0,3l"
+      const looksLikeSoup = !mainSectionStarted && /^0,[0-9]+l\s/i.test(rawName);
+      const isSoup = hasSoupKeyword || looksLikeSoup;
+      const displayName = hasSoupKeyword ? rawName.replace(/^Pol[eé]vka\s*:?\s*/i, "") : rawName;
 
       if (!isSoup && !mainSectionStarted) {
         mainSectionStarted = true;
